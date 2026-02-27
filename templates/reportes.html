@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes - Ferretería</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+        
+        .header {
+            background: #16213e;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #e94560;
+        }
+        .header h1 { color: #e94560; font-size: 22px; }
+        .btn-volver {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+
+        /* Filtros */
+        .filtros {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .btn-filtro {
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: 2px solid #888;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-filtro.activo {
+            border-color: #e94560;
+            background: #e94560;
+        }
+
+        /* Tarjetas resumen */
+        .tarjetas {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .tarjeta {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #e94560;
+        }
+        .tarjeta.verde { border-left-color: #4ecca3; }
+        .tarjeta.azul { border-left-color: #45b7d1; }
+        .tarjeta.amarillo { border-left-color: #ffd700; }
+        .tarjeta h3 { font-size: 13px; color: #888; margin-bottom: 8px; }
+        .tarjeta .valor { font-size: 28px; font-weight: bold; color: white; }
+        .tarjeta .sub { font-size: 12px; color: #888; margin-top: 5px; }
+
+        /* Sección doble */
+        .doble {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .seccion {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .seccion h2 {
+            color: #e94560;
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        /* Top productos */
+        .producto-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+        .producto-row:last-child { border-bottom: none; }
+        .producto-nombre { font-size: 14px; }
+        .producto-cantidad {
+            background: #e94560;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* Metodos de pago */
+        .metodo-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        .metodo-row:last-child { border-bottom: none; }
+        .metodo-nombre { font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .metodo-total { color: #4ecca3; font-weight: bold; font-size: 16px; }
+
+        /* Tabla ventas */
+        .tabla-container {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .tabla-container h2 {
+            color: #e94560;
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            padding: 10px;
+            color: #888;
+            border-bottom: 1px solid #333;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #222;
+        }
+        tr:hover td { background: #1a1a2e; }
+        .badge-metodo {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .badge-efectivo { background: #2d5a27; color: #4ecca3; }
+        .badge-tarjeta { background: #1a3a5c; color: #45b7d1; }
+        .badge-transferencia { background: #5c3a1a; color: #ffd700; }
+
+        .cargando {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .doble { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📊 Reportes de Ventas</h1>
+    <a href="/" class="btn-volver">← Volver al POS</a>
+</div>
+
+<div class="container">
+
+    <!-- Filtros -->
+    <div class="filtros">
+        <button class="btn-filtro activo" onclick="cargarReporte('hoy', this)">📅 Hoy</button>
+        <button class="btn-filtro" onclick="cargarReporte('semana', this)">📆 Esta semana</button>
+        <button class="btn-filtro" onclick="cargarReporte('mes', this)">🗓️ Este mes</button>
+        <button class="btn-filtro" onclick="cargarReporte('todo', this)">📋 Todo</button>
+    </div>
+
+    <!-- Tarjetas resumen -->
+    <div class="tarjetas" id="tarjetas">
+        <div class="cargando">Cargando... ⏳</div>
+    </div>
+
+    <!-- Top productos y métodos de pago -->
+    <div class="doble" id="doble" style="display:none">
+        <div class="seccion">
+            <h2>🏆 Productos más vendidos</h2>
+            <div id="top-productos"></div>
+        </div>
+        <div class="seccion">
+            <h2>💳 Ventas por método de pago</h2>
+            <div id="metodos-pago"></div>
+        </div>
+    </div>
+
+    <!-- Tabla de ventas -->
+    <div class="tabla-container" id="tabla-container" style="display:none">
+        <h2>🧾 Últimas ventas</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Ticket</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                    <th>Método</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-ventas"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    async function cargarReporte(filtro, btn) {
+        // Actualizar botones
+        document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+
+        // Mostrar cargando
+        document.getElementById('tarjetas').innerHTML = '<div class="cargando">Cargando... ⏳</div>';
+        document.getElementById('doble').style.display = 'none';
+        document.getElementById('tabla-container').style.display = 'none';
+
+        try {
+            const res = await fetch(`/api/reporte?filtro=${filtro}`);
+            const data = await res.json();
+            mostrarReporte(data);
+        } catch(e) {
+            document.getElementById('tarjetas').innerHTML = '<div class="cargando">Error cargando reporte ❌</div>';
+        }
+    }
+
+    function mostrarReporte(data) {
+        // Tarjetas resumen
+        document.getElementById('tarjetas').innerHTML = `
+            <div class="tarjeta">
+                <h3>💰 Total vendido</h3>
+                <div class="valor">$${data.total_vendido.toFixed(2)}</div>
+                <div class="sub">En el período seleccionado</div>
+            </div>
+            <div class="tarjeta verde">
+                <h3>🧾 Tickets</h3>
+                <div class="valor">${data.num_tickets}</div>
+                <div class="sub">Ventas realizadas</div>
+            </div>
+            <div class="tarjeta azul">
+                <h3>📦 Productos vendidos</h3>
+                <div class="valor">${data.num_productos}</div>
+                <div class="sub">Líneas de venta</div>
+            </div>
+            <div class="tarjeta amarillo">
+                <h3>💵 Ticket promedio</h3>
+                <div class="valor">$${data.num_tickets > 0 ? (data.total_vendido / data.num_tickets).toFixed(2) : '0.00'}</div>
+                <div class="sub">Por venta</div>
+            </div>
+        `;
+
+        // Top productos
+        let htmlProductos = '';
+        if (data.top_productos.length === 0) {
+            htmlProductos = '<p style="color:#888; text-align:center; padding:20px">Sin ventas en este período</p>';
+        } else {
+            data.top_productos.forEach(([nombre, cantidad]) => {
+                htmlProductos += `
+                    <div class="producto-row">
+                        <span class="producto-nombre">${nombre}</span>
+                        <span class="producto-cantidad">${cantidad} uds</span>
+                    </div>`;
+            });
+        }
+        document.getElementById('top-productos').innerHTML = htmlProductos;
+
+        // Métodos de pago
+        let htmlMetodos = '';
+        const iconos = { efectivo: '💵', tarjeta: '💳', transferencia: '📱' };
+        if (Object.keys(data.metodos).length === 0) {
+            htmlMetodos = '<p style="color:#888; text-align:center; padding:20px">Sin ventas en este período</p>';
+        } else {
+            for (const [metodo, total] of Object.entries(data.metodos)) {
+                const icono = iconos[metodo] || '💰';
+                htmlMetodos += `
+                    <div class="metodo-row">
+                        <span class="metodo-nombre">${icono} ${metodo.charAt(0).toUpperCase() + metodo.slice(1)}</span>
+                        <span class="metodo-total">$${parseFloat(total).toFixed(2)}</span>
+                    </div>`;
+            }
+        }
+        document.getElementById('metodos-pago').innerHTML = htmlMetodos;
+
+        // Tabla de ventas
+        let htmlTabla = '';
+        if (data.ventas.length === 0) {
+            htmlTabla = '<tr><td colspan="7" style="text-align:center; color:#888; padding:20px">Sin ventas en este período</td></tr>';
+        } else {
+            [...data.ventas].reverse().forEach(v => {
+                const badgeClass = v.Metodo_pago === 'efectivo' ? 'badge-efectivo' : 
+                                   v.Metodo_pago === 'tarjeta' ? 'badge-tarjeta' : 'badge-transferencia';
+                htmlTabla += `
+                    <tr>
+                        <td>${v.Fecha}</td>
+                        <td>${v.Ticket}</td>
+                        <td>${v.Producto}</td>
+                        <td>${v.Cantidad}</td>
+                        <td>$${v.Precio}</td>
+                        <td>$${v.Subtotal}</td>
+                        <td><span class="badge-metodo ${badgeClass}">${v.Metodo_pago}</span></td>
+                    </tr>`;
+            });
+        }
+        document.getElementById('tabla-ventas').innerHTML = htmlTabla;
+
+        document.getElementById('doble').style.display = 'grid';
+        document.getElementById('tabla-container').style.display = 'block';
+    }
+
+    // Cargar reporte de hoy al entrar
+    cargarReporte('hoy', document.querySelector('.btn-filtro'));
+</script>
+</body>
+</html>
