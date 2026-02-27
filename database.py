@@ -8,7 +8,19 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name('credenciales.json', scope)
+import os
+import json
+
+# DESPUÉS
+creds_json = os.environ.get('CREDENCIALES')
+if creds_json:
+    # En Railway - lee desde variable de entorno
+    creds_dict = json.loads(creds_json)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+else:
+    # Local - lee desde archivo
+    creds = ServiceAccountCredentials.from_json_keyfile_name('credenciales.json', scope)
+
 client = gspread.authorize(creds)
 
 SHEET_ID = '1QdlBw-SsuvmhuCuex3RtXjUtkrO_nLJELQHVVYEfSfE'
