@@ -150,11 +150,12 @@
 <script>
     let carrito = [];
     let metodo = 'efectivo';
-    let numTicket = 1;
+    let numTicket = parseInt(localStorage.getItem('numTicket') || '1');
 
     const fecha = new Date();
     document.getElementById('fecha').textContent = fecha.toLocaleDateString('es-MX', 
         {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+    document.getElementById('num-ticket').textContent = String(numTicket).padStart(4, '0');
 
     async function cargarProductos() {
         try {
@@ -331,6 +332,7 @@
         document.getElementById('t-items').innerHTML = html;
         document.getElementById('ticket-impreso').classList.add('activo');
         numTicket++;
+        localStorage.setItem('numTicket', numTicket);
         document.getElementById('num-ticket').textContent = String(numTicket).padStart(4, '0');
     }
 
