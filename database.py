@@ -237,8 +237,13 @@ def procesar_venta(data):
         return {'error': errores[0]}
 
     try:
-        todas_ventas = sheet_ventas.get_all_values()
-        num_ticket = max(len(todas_ventas) - 1, 0) + 1
+        todas_ventas = sheet_ventas.get_all_records()
+        if todas_ventas:
+            # Contar tickets únicos, no filas
+            tickets_unicos = set(str(r.get('Ticket', '')) for r in todas_ventas if r.get('Ticket'))
+            num_ticket = len(tickets_unicos) + 1
+        else:
+            num_ticket = 1
     except:
         num_ticket = int(time.time())
 
