@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs — Tlapalería El Mirador</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+        .header { background: #16213e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
+        .header h1 { color: #e94560; font-size: 20px; }
+        .nav { display: flex; gap: 6px; }
+        .nav a { color: #888; text-decoration: none; padding: 8px 13px; border-radius: 8px; font-size: 13px; transition: all 0.2s; }
+        .nav a:hover { background: #1a1a2e; color: white; }
+        .nav a.active { background: #e94560; color: white; }
+        .nav a.logout { background: #2a2a4a; color: #ff6b6b; }
+        .nav a.logout:hover { background: #ff6b6b; color: white; }
+
+        .container { padding: 25px; }
+        .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .search-input { padding: 10px 14px; border-radius: 8px; border: 2px solid #2a2a4a; background: #16213e; color: white; font-size: 14px; width: 250px; }
+        .search-input:focus { outline: none; border-color: #e94560; }
+        .filter-tabs { display: flex; }
+        .ftab { padding: 9px 14px; font-size: 12px; font-weight: bold; cursor: pointer; background: transparent; color: #888; border: 1px solid #2a2a4a; border-right: none; transition: all 0.2s; }
+        .ftab:last-child { border-right: 1px solid #2a2a4a; border-radius: 0 8px 8px 0; }
+        .ftab:first-child { border-radius: 8px 0 0 8px; }
+        .ftab.active, .ftab:hover { background: #e94560; color: white; border-color: #e94560; }
+        .total-badge { background: #2a2a4a; color: #888; padding: 9px 14px; border-radius: 8px; font-size: 13px; }
+
+        .table-card { background: #16213e; border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #0f1628; }
+        th { padding: 12px 16px; text-align: left; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 11px 16px; border-bottom: 1px solid #1a1a2e; font-size: 13px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #1e2240; }
+
+        .accion-badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+        .ac-login      { background: rgba(78,204,163,0.15); color: #4ecca3; border: 1px solid rgba(78,204,163,0.3); }
+        .ac-logout     { background: rgba(136,136,136,0.15); color: #888; border: 1px solid rgba(136,136,136,0.3); }
+        .ac-venta      { background: rgba(122,179,255,0.15); color: #7ab3ff; border: 1px solid rgba(122,179,255,0.3); }
+        .ac-producto   { background: rgba(255,193,7,0.15); color: #ffc107; border: 1px solid rgba(255,193,7,0.3); }
+        .ac-proveedor  { background: rgba(156,39,176,0.2); color: #ce93d8; border: 1px solid rgba(156,39,176,0.3); }
+        .ac-usuario    { background: rgba(233,69,96,0.15); color: #e94560; border: 1px solid rgba(233,69,96,0.3); }
+        .ac-default    { background: rgba(255,255,255,0.05); color: #aaa; border: 1px solid rgba(255,255,255,0.1); }
+
+        .empty { text-align: center; padding: 50px; color: #555; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+        <h1>🔧 Tlapalería El Mirador</h1>
+    </div>
+    <nav class="nav">
+        <a href="/">🏠 POS</a>
+        <a href="/productos">📦 Inventario</a>
+        <a href="/proveedores">🚛 Proveedores</a>
+        <a href="/reportes">📊 Reportes</a>
+        <a href="/ticket">🧾 Tickets</a>
+        <a href="/usuarios">👥 Usuarios</a>
+        <a href="/logs" class="active">📋 Logs</a>
+        <a href="/logout" class="logout">⏏ Salir</a>
+    </nav>
+</div>
+
+<div class="container">
+    <div class="toolbar">
+        <input type="text" class="search-input" id="buscar" placeholder="🔍 Buscar usuario o acción..." oninput="renderizar()">
+        <div class="filter-tabs">
+            <button class="ftab active" onclick="setFiltro('todos',this)">Todos</button>
+            <button class="ftab" onclick="setFiltro('LOGIN',this)">Accesos</button>
+            <button class="ftab" onclick="setFiltro('VENTA',this)">Ventas</button>
+            <button class="ftab" onclick="setFiltro('PRODUCTO',this)">Productos</button>
+            <button class="ftab" onclick="setFiltro('PROVEEDOR',this)">Proveedores</button>
+        </div>
+        <span class="total-badge" id="total-badge">— registros</span>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr><th>Fecha y Hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
+            </thead>
+            <tbody id="tbody">
+                <tr><td colspan="4" class="empty">Cargando... ⏳</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let logs = [];
+    let filtroActivo = 'todos';
+
+    async function cargar() {
+        try {
+            const res = await fetch('/api/logs');
+            logs = await res.json();
+            renderizar();
+        } catch(e) {
+            document.getElementById('tbody').innerHTML = '<tr><td colspan="4" class="empty">Error cargando logs ❌</td></tr>';
+        }
+    }
+
+    function badgeClass(accion) {
+        const a = (accion || '').toUpperCase();
+        if (a.includes('LOGIN')) return 'ac-login';
+        if (a.includes('LOGOUT')) return 'ac-logout';
+        if (a.includes('VENTA')) return 'ac-venta';
+        if (a.includes('PRODUCTO')) return 'ac-producto';
+        if (a.includes('PROVEEDOR')) return 'ac-proveedor';
+        if (a.includes('USUARIO') || a.includes('CONTRASENA')) return 'ac-usuario';
+        return 'ac-default';
+    }
+
+    function renderizar() {
+        const q = document.getElementById('buscar').value.toLowerCase();
+        let filtrados = logs.filter(l => {
+            const coincide = (l.Usuario||'').toLowerCase().includes(q) ||
+                             (l.Accion||'').toLowerCase().includes(q) ||
+                             (l.Detalle||'').toLowerCase().includes(q);
+            const filtroOk = filtroActivo === 'todos' || (l.Accion||'').toUpperCase().includes(filtroActivo);
+            return coincide && filtroOk;
+        });
+
+        document.getElementById('total-badge').textContent = `${filtrados.length} registros`;
+
+        if (!filtrados.length) {
+            document.getElementById('tbody').innerHTML = '<tr><td colspan="4" class="empty">Sin registros 📭</td></tr>';
+            return;
+        }
+
+        document.getElementById('tbody').innerHTML = filtrados.map(l => `
+            <tr>
+                <td style="color:#888;font-size:12px;white-space:nowrap">${l.Fecha || '—'}</td>
+                <td><strong>${l.Usuario || '—'}</strong></td>
+                <td><span class="accion-badge ${badgeClass(l.Accion)}">${l.Accion || '—'}</span></td>
+                <td style="color:#aaa;font-size:12px">${l.Detalle || '—'}</td>
+            </tr>`).join('');
+    }
+
+    function setFiltro(f, btn) {
+        filtroActivo = f;
+        document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderizar();
+    }
+
+    cargar();
+</script>
+</body>
+</html>
