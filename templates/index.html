@@ -20,6 +20,9 @@
         .grid-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
         .producto-card { background: #16213e; border-radius: 10px; padding: 15px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
         .producto-card:hover { border-color: #e94560; transform: scale(1.02); }
+        .producto-card.sin-stock { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+        .producto-card.sin-stock:hover { border-color: transparent; transform: none; }
+        .sin-stock-label { color: #ff4444; font-size: 12px; font-weight: bold; margin-top: 5px; }
         .producto-card h3 { font-size: 14px; margin-bottom: 8px; }
         .producto-card .precio { color: #e94560; font-size: 20px; font-weight: bold; }
         .producto-card .stock { font-size: 12px; color: #888; margin-top: 5px; }
@@ -174,14 +177,20 @@
         grid.innerHTML = '';
         productos.forEach(p => {
             const stockClass = p.stock <= p.minimo ? 'stock-bajo' : '';
-            grid.innerHTML += `
-                <div class="producto-card" onclick="agregarAlCarrito(${p.id}, '${p.nombre}', ${p.precio})">
-                    <h3>${p.nombre}</h3>
-                    <div class="precio">$${p.precio}</div>
-                    <div class="stock ${stockClass}">
-                        ${p.stock <= p.minimo ? '⚠️' : '📦'} Stock: ${p.stock}
-                    </div>
-                </div>`;
+            const sinStock = p.stock <= 0;
+            const card = document.createElement('div');
+            card.className = `producto-card${sinStock ? ' sin-stock' : ''}`;
+            card.innerHTML = `
+                <h3>${p.nombre}</h3>
+                <div class="precio">$${p.precio}</div>
+                <div class="stock ${stockClass}">
+                    ${sinStock ? '🚫' : p.stock <= p.minimo ? '⚠️' : '📦'} Stock: ${p.stock}
+                </div>
+                ${sinStock ? '<div class="sin-stock-label">AGOTADO</div>' : ''}`;
+            if (!sinStock) {
+                card.addEventListener('click', () => agregarAlCarrito(p.id, p.nombre, p.precio));
+            }
+            grid.appendChild(card);
         });
     }
 
