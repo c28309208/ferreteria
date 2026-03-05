@@ -363,3 +363,124 @@ def eliminar_proveedor(id):
         return {'ok': True}
     except Exception as e:
         return {'error': str(e)}
+
+# ─────────────────────────────────────────
+# HOJAS USUARIOS Y LOGS
+# ─────────────────────────────────────────
+
+def get_sheet_usuarios():
+    sheet = client.open_by_key(SHEET_ID)
+    try:
+        return sheet.worksheet('Usuarios')
+    except:
+        # Crear hoja si no existe
+        ws = sheet.add_worksheet(title='Usuarios', rows=100, cols=5)
+        ws.append_row(['usuario', 'password_hash', 'rol', 'nombre', 'activo'])
+        return ws
+
+def get_sheet_logs():
+    sheet = client.open_by_key(SHEET_ID)
+    try:
+        return sheet.worksheet('Logs')
+    except:
+        ws = sheet.add_worksheet(title='Logs', rows=5000, cols=4)
+        ws.append_row(['Fecha', 'Usuario', 'Accion', 'Detalle'])
+        return ws
+
+# ─────────────────────────────────────────
+# USUARIOS
+# ─────────────────────────────────────────
+
+def _hash(password):
+    import hashlib, os
+    salt = os.environ.get('SECRET_KEY', 'tlapaleria2026')
+    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+
+def verificar_login(usuario, password):
+    try:
+        sheet = get_sheet_usuarios()
+        registros = sheet.get_all_records()
+        for r in registros:
+            if str(r.get('usuario', '')).lower() == usuario.lower():
+                if str(r.get('activo', '1')) == '0':
+                    return None
+                if r.get('password_hash') == _hash(password):
+                    return {'rol': r.get('rol', 'empleado'), 'nombre': r.get('nombre', usuario)}
+        return None
+    except Exception as e:
+        print(f"Error verificar_login: {e}")
+        return None
+
+def get_usuarios():
+    try:
+        sheet = get_sheet_usuarios()
+        registros = sheet.get_all_records()
+        # No devolver el hash
+        return [{'usuario': r['usuario'], 'rol': r.get('rol','empleado'), 'nombre': r.get('nombre',''), 'activo': r.get('activo',1)} for r in registros]
+    except Exception as e:
+        return []
+
+def crear_usuario(data):
+    try:
+        usuario = data.get('usuario', '').strip().lower()
+        password = data.get('password', '')
+        rol = data.get('rol', 'empleado')
+        nombre = data.get('nombre', usuario)
+        if not usuario or not password:
+            return {'error': 'Usuario y contraseña son obligatorios'}
+        sheet = get_sheet_usuarios()
+        existentes = sheet.get_all_records()
+        if any(str(r.get('usuario','')).lower() == usuario for r in existentes):
+            return {'error': 'El usuario ya existe'}
+        sheet.append_row([usuario, _hash(password), rol, nombre, 1])
+        return {'ok': True}
+    except Exception as e:
+        return {'error': str(e)}
+
+def eliminar_usuario(usuario):
+    try:
+        sheet = get_sheet_usuarios()
+        registros = sheet.get_all_records()
+        for i, r in enumerate(registros):
+            if str(r.get('usuario', '')).lower() == usuario.lower():
+                if r.get('rol') == 'admin':
+                    return {'error': 'No puedes eliminar al admin'}
+                sheet.delete_rows(i + 2)
+                return {'ok': True}
+        return {'error': 'Usuario no encontrado'}
+    except Exception as e:
+        return {'error': str(e)}
+
+def cambiar_password(usuario, nueva_password):
+    try:
+        if not nueva_password or len(nueva_password) < 4:
+            return {'error': 'La contraseña debe tener al menos 4 caracteres'}
+        sheet = get_sheet_usuarios()
+        registros = sheet.get_all_records()
+        for i, r in enumerate(registros):
+            if str(r.get('usuario', '')).lower() == usuario.lower():
+                sheet.update_cell(i + 2, 2, _hash(nueva_password))
+                return {'ok': True}
+        return {'error': 'Usuario no encontrado'}
+    except Exception as e:
+        return {'error': str(e)}
+
+# ─────────────────────────────────────────
+# LOGS
+# ─────────────────────────────────────────
+
+def registrar_log(usuario, accion, detalle=''):
+    try:
+        sheet = get_sheet_logs()
+        fecha = datetime.now(ZoneInfo('America/Mexico_City')).strftime('%d/%m/%Y %H:%M:%S')
+        sheet.append_row([fecha, usuario, accion, str(detalle)])
+    except Exception as e:
+        print(f"Error log: {e}")
+
+def get_logs():
+    try:
+        sheet = get_sheet_logs()
+        registros = sheet.get_all_records()
+        return list(reversed(registros))  # más reciente primero
+    except Exception as e:
+        return []
