@@ -22,8 +22,23 @@ def venta():
 
 @app.route('/productos')
 def productos():
-    productos = database.get_productos()
-    return render_template('productos.html', productos=productos)
+    return render_template('productos.html')
+
+@app.route('/api/productos', methods=['GET'])
+def get_productos():
+    return jsonify(database.get_productos())
+
+@app.route('/api/productos', methods=['POST'])
+def crear_producto():
+    return jsonify(database.crear_producto(request.json))
+
+@app.route('/api/productos/<int:id>', methods=['PUT'])
+def actualizar_producto(id):
+    return jsonify(database.actualizar_producto(id, request.json))
+
+@app.route('/api/productos/<int:id>', methods=['DELETE'])
+def eliminar_producto(id):
+    return jsonify(database.eliminar_producto(id))
 
 @app.route('/reportes')
 def reportes():
@@ -34,6 +49,10 @@ def api_reporte():
     filtro = request.args.get('filtro', 'hoy')
     data = database.get_reporte(filtro)
     return jsonify(data)
+
+@app.route('/ticket')
+def ticket():
+    return render_template('ticket.html')
 
 @app.route('/proveedores')
 def proveedores():
@@ -57,4 +76,4 @@ def eliminar_proveedor(id):
 
 if __name__ == '__main__':
     import os
-app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
