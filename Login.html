@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso — Tlapalería El Mirador</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        .logo-area { text-align: center; margin-bottom: 35px; }
+        .logo-area h1 { color: #e94560; font-size: 28px; margin-bottom: 6px; }
+        .logo-area p { color: #555; font-size: 14px; }
+
+        .card { background: #16213e; border-radius: 16px; padding: 35px; width: 360px; border: 2px solid #2a2a4a; }
+        .card h2 { color: #e94560; font-size: 18px; margin-bottom: 25px; text-align: center; }
+
+        .campo { margin-bottom: 18px; }
+        .campo label { display: block; font-size: 12px; color: #888; margin-bottom: 7px; }
+        .campo input { width: 100%; padding: 12px 15px; border-radius: 8px; border: 2px solid #2a2a4a; background: #1a1a2e; color: white; font-size: 15px; transition: border-color 0.2s; }
+        .campo input:focus { outline: none; border-color: #e94560; }
+
+        .btn-login { width: 100%; padding: 14px; background: #e94560; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+        .btn-login:hover { background: #c73652; }
+        .btn-login:disabled { background: #555; cursor: not-allowed; }
+
+        .error { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.4); color: #e94560; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; display: none; text-align: center; }
+        .error.show { display: block; }
+
+        .footer { margin-top: 25px; color: #333; font-size: 12px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="logo-area">
+    <h1>🔧 Tlapalería El Mirador</h1>
+    <p>Sistema de Punto de Venta</p>
+</div>
+
+<div class="card">
+    <h2>🔐 Iniciar Sesión</h2>
+    <div class="error" id="error-msg"></div>
+    <div class="campo">
+        <label>Usuario</label>
+        <input type="text" id="usuario" placeholder="Tu usuario" autocomplete="username">
+    </div>
+    <div class="campo">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') entrar()">
+    </div>
+    <button class="btn-login" id="btn-login" onclick="entrar()">Entrar →</button>
+</div>
+
+<div class="footer">Tlapalería El Mirador © 2026</div>
+
+<script>
+    async function entrar() {
+        const usuario = document.getElementById('usuario').value.trim();
+        const password = document.getElementById('password').value;
+        const btn = document.getElementById('btn-login');
+        const err = document.getElementById('error-msg');
+
+        if (!usuario || !password) {
+            err.textContent = 'Ingresa usuario y contraseña';
+            err.classList.add('show');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Verificando...';
+        err.classList.remove('show');
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, password })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                window.location.href = '/';
+            } else {
+                err.textContent = data.error || 'Usuario o contraseña incorrectos';
+                err.classList.add('show');
+                btn.disabled = false;
+                btn.textContent = 'Entrar →';
+            }
+        } catch(e) {
+            err.textContent = 'Error de conexión, intenta de nuevo';
+            err.classList.add('show');
+            btn.disabled = false;
+            btn.textContent = 'Entrar →';
+        }
+    }
+
+    // Auto-focus
+    document.getElementById('usuario').focus();
+</script>
+</body>
+</html>
