@@ -11,14 +11,11 @@ scope = [
 import os
 import json
 
-# DESPUÉS
 creds_json = os.environ.get('CREDENCIALES')
 if creds_json:
-    # En Railway - lee desde variable de entorno
     creds_dict = json.loads(creds_json)
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 else:
-    # Local - lee desde archivo
     creds = ServiceAccountCredentials.from_json_keyfile_name('credenciales.json', scope)
 
 client = gspread.authorize(creds)
@@ -69,6 +66,73 @@ def buscar_producto(query):
     query = query.lower()
     return [p for p in productos if query in str(p.get('nombre', '')).lower()]
 
+def crear_producto(data):
+    global cache_productos, cache_tiempo
+    try:
+        sheet = get_sheet_productos()
+        todos = sheet.get_all_records()
+        # Generar nuevo ID
+        nuevo_id = max([int(r.get('id', 0)) for r in todos], default=0) + 1
+        sheet.append_row([
+            nuevo_id,
+            data.get('nombre', ''),
+            float(data.get('precio', 0)),
+            int(data.get('stock', 0)),
+            int(data.get('minimo', 5))
+        ])
+        cache_productos = []
+        cache_tiempo = 0
+        return {'ok': True, 'id': nuevo_id}
+    except Exception as e:
+        return {'error': str(e)}
+
+def actualizar_producto(id, data):
+    global cache_productos, cache_tiempo
+    try:
+        sheet = get_sheet_productos()
+        todos = sheet.get_all_values()  # incluye encabezado
+        fila_num = None
+        producto_actual = None
+        records = sheet.get_all_records()
+        for i, r in enumerate(records):
+            if str(r.get('id')) == str(id):
+                fila_num = i + 2  # +1 encabezado, +1 base 1
+                producto_actual = r
+                break
+        if not fila_num:
+            return {'error': 'Producto no encontrado'}
+        sheet.update(f'A{fila_num}:E{fila_num}', [[
+            id,
+            data.get('nombre', producto_actual.get('nombre', '')),
+            float(data.get('precio', producto_actual.get('precio', 0))),
+            int(data.get('stock', producto_actual.get('stock', 0))),
+            int(data.get('minimo', producto_actual.get('minimo', 5)))
+        ]])
+        cache_productos = []
+        cache_tiempo = 0
+        return {'ok': True}
+    except Exception as e:
+        return {'error': str(e)}
+
+def eliminar_producto(id):
+    global cache_productos, cache_tiempo
+    try:
+        sheet = get_sheet_productos()
+        records = sheet.get_all_records()
+        fila_num = None
+        for i, r in enumerate(records):
+            if str(r.get('id')) == str(id):
+                fila_num = i + 2
+                break
+        if not fila_num:
+            return {'error': 'Producto no encontrado'}
+        sheet.delete_rows(fila_num)
+        cache_productos = []
+        cache_tiempo = 0
+        return {'ok': True}
+    except Exception as e:
+        return {'error': str(e)}
+
 # ─────────────────────────────────────────
 # VENTAS
 # ─────────────────────────────────────────
@@ -104,11 +168,9 @@ def get_reporte(filtro='hoy'):
     else:
         ventas_filtradas = registros
 
-    # Totales
     total_vendido = sum(float(r.get('Subtotal', 0)) for r in ventas_filtradas)
     num_tickets = len(set(str(r.get('Ticket', '')) for r in ventas_filtradas))
 
-    # Productos más vendidos
     productos_vendidos = {}
     for r in ventas_filtradas:
         nombre = r.get('Producto', 'Desconocido')
@@ -120,7 +182,6 @@ def get_reporte(filtro='hoy'):
 
     top_productos = sorted(productos_vendidos.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # Ventas por método de pago
     metodos = {}
     for r in ventas_filtradas:
         m = str(r.get('Metodo_pago', 'desconocido'))
@@ -135,7 +196,7 @@ def get_reporte(filtro='hoy'):
         'num_productos': len(ventas_filtradas),
         'top_productos': top_productos,
         'metodos': metodos,
-        'ventas': ventas_filtradas[-20:]
+        'ventas': ventas_filtradas
     }
 
 def procesar_venta(data):
@@ -154,34 +215,27 @@ def procesar_venta(data):
     except Exception as e:
         return {'error': f'Error de conexión con Google Sheets: {e}'}
 
-    # --- Validaciones previas ---
     errores = []
     for item in items:
         producto_id = item.get('id')
         cantidad = item.get('cantidad', 0)
-
         if not producto_id:
             errores.append('Producto sin ID')
             continue
-
         producto = next((p for p in productos if str(p.get('id')) == str(producto_id)), None)
-
         if not producto:
             errores.append(f'Producto con ID {producto_id} no encontrado')
             continue
-
         try:
             stock_actual = int(producto.get('stock', 0))
         except:
             stock_actual = 0
-
         if stock_actual < cantidad:
             errores.append(f"Stock insuficiente: {producto['nombre']} (disponible: {stock_actual})")
 
     if errores:
         return {'error': errores[0]}
 
-    # --- Generar número de ticket ---
     try:
         todas_ventas = sheet_ventas.get_all_values()
         num_ticket = max(len(todas_ventas) - 1, 0) + 1
@@ -191,7 +245,6 @@ def procesar_venta(data):
     fecha_hora = datetime.now().strftime('%d/%m/%Y %H:%M')
     all_rows = sheet_productos.get_all_values()
 
-    # --- Calcular total del ticket completo primero ---
     total = 0
     for item in items:
         producto_id = item.get('id')
@@ -200,7 +253,6 @@ def procesar_venta(data):
         if producto:
             total += float(producto['precio']) * cantidad
 
-    # --- Registrar cada línea y actualizar stock ---
     detalle = []
     for item in items:
         producto_id = item.get('id')
@@ -210,7 +262,6 @@ def procesar_venta(data):
         if producto:
             subtotal = float(producto['precio']) * cantidad
 
-            # Actualizar stock
             for i, row in enumerate(all_rows):
                 if row[0] == str(producto_id):
                     nuevo_stock = int(producto.get('stock', 0)) - cantidad
@@ -220,7 +271,6 @@ def procesar_venta(data):
                         print(f"Error actualizando stock: {e}")
                     break
 
-            # Guardar fila en hoja Ventas
             try:
                 sheet_ventas.append_row([
                     fecha_hora,
@@ -229,7 +279,7 @@ def procesar_venta(data):
                     cantidad,
                     float(producto['precio']),
                     subtotal,
-                    round(total, 2),   # Total correcto del ticket completo
+                    round(total, 2),
                     metodo
                 ])
             except Exception as e:
@@ -242,7 +292,6 @@ def procesar_venta(data):
                 'subtotal': subtotal
             })
 
-    # Limpiar caché
     cache_productos = []
     cache_tiempo = 0
 
@@ -260,7 +309,6 @@ def get_proveedores():
     try:
         sheet = get_sheet_proveedores()
         registros = sheet.get_all_records()
-        print(registros)
         for i, r in enumerate(registros):
             r['id'] = i + 1
         return {'proveedores': registros}
@@ -289,7 +337,7 @@ def actualizar_proveedor(id, data):
         if id < 1 or id > len(registros):
             return {'error': 'Proveedor no encontrado'}
         actual = registros[id - 1]
-        fila = id + 1  # +1 por encabezado
+        fila = id + 1
         sheet.update(f'A{fila}:F{fila}', [[
             data.get('proveedor', actual.get('proveedor', '')),
             data.get('producto', actual.get('producto', '')),
