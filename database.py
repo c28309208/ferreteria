@@ -303,13 +303,16 @@ def verificar_login(usuario, password):
     try:
         sheet = get_sheet_usuarios()
         registros = sheet.get_all_records()
-        print(f"DEBUG: buscando usuario '{usuario}', registros: {len(registros)}")
+        hash_calculado = _hash(password)
+        print(f"DEBUG LOGIN: usuario='{usuario}' hash_calc='{hash_calculado}'")
         for r in registros:
-            print(f"DEBUG: comparando con '{r.get('usuario')}', hash_guardado={str(r.get('password_hash',''))[:10]}..., hash_calculado={_hash(password)[:10]}...")
+            hash_guardado = str(r.get('password_hash', '')).strip()
+            print(f"DEBUG REGISTRO: usuario='{r.get('usuario')}' hash_guard='{hash_guardado}'")
+            print(f"DEBUG COINCIDE: {hash_guardado == hash_calculado}")
             if str(r.get('usuario', '')).lower() == usuario.lower():
                 if str(r.get('activo', '1')) in ('0', 0, False, 'False', 'false'):
                     return None
-                if r.get('password_hash') == _hash(password):
+                if hash_guardado == hash_calculado:
                     return {'rol': r.get('rol', 'empleado'), 'nombre': r.get('nombre', usuario)}
         return None
     except Exception as e:
