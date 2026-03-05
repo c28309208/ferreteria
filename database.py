@@ -299,20 +299,15 @@ def _hash(password):
     salt = os.environ.get('SECRET_KEY', 'tlapaleria2026')
     return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
 
-
-  
-    # TEMPORAL - borrar después
-    if usuario == 'admin' and password == 'admin1234':
-        return {'rol': 'admin', 'nombre': 'Administrador'}
+def verificar_login(usuario, password):
     try:
         sheet = get_sheet_usuarios()
         registros = sheet.get_all_records()
         hash_calculado = _hash(password)
-        print(f"DEBUG LOGIN: usuario='{usuario}' hash_calc='{hash_calculado}'")
+        print(f"DEBUG: usuario='{usuario}' hash='{hash_calculado[:10]}...'")
         for r in registros:
             hash_guardado = str(r.get('password_hash', '')).strip()
-            print(f"DEBUG REGISTRO: usuario='{r.get('usuario')}' hash_guard='{hash_guardado}'")
-            print(f"DEBUG COINCIDE: {hash_guardado == hash_calculado}")
+            print(f"DEBUG: comparando con '{r.get('usuario')}' coincide={hash_guardado == hash_calculado}")
             if str(r.get('usuario', '')).lower() == usuario.lower():
                 if str(r.get('activo', '1')) in ('0', 0, False, 'False', 'false'):
                     return None
