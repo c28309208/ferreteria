@@ -337,5 +337,17 @@
 
   cargar();
 </script>
+
+<script>
+    // Mostrar opciones de admin si corresponde
+    fetch('/api/sesion').then(r => r.json()).then(s => {
+        if (s.rol === 'admin') {
+            const u = document.getElementById('nav-usuarios');
+            const l = document.getElementById('nav-logs');
+            if (u) u.style.display = '';
+            if (l) l.style.display = '';
+        }
+    }).catch(() => {});
+</script>
 </body>
 </html>
