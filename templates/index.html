@@ -159,14 +159,19 @@
         grid.innerHTML = '';
         productos.forEach(p => {
             const stockClass = p.stock <= p.minimo ? 'stock-bajo' : '';
-            grid.innerHTML += `
-                <div class="producto-card" onclick="agregarAlCarrito(${p.id}, '${p.nombre}', ${p.precio})">
+            const card = document.createElement('div');
+            card.className = 'producto-card';
+            card.dataset.id = p.id;
+            card.dataset.nombre = p.nombre;
+            card.dataset.precio = p.precio;
+            card.innerHTML = `
                     <h3>${p.nombre}</h3>
                     <div class="precio">$${p.precio}</div>
                     <div class="stock ${stockClass}">
                         ${p.stock <= p.minimo ? '⚠️' : '📦'} Stock: ${p.stock}
-                    </div>
-                </div>`;
+                    </div>`;
+            card.addEventListener('click', () => agregarAlCarrito(p.id, p.nombre, p.precio));
+            grid.appendChild(card);
         });
     }
 
@@ -323,6 +328,10 @@
         cargarProductos();
     }
 
+    cargarProductos();
+</script>
+</body>
+</html>
     cargarProductos();
 </script>
 </body>
