@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tickets — Ferretería García</title>
+    <title>Tickets — Tlapalería El Mirador</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
@@ -84,10 +84,14 @@
 <body>
 
 <div class="header">
-    <h1>🏪 Ferretería García</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+        <h1>🔧 Tlapalería El Mirador</h1>
+        <img src="https://1000logos.net/wp-content/uploads/2021/05/Truper-logo.png" alt="Truper"
+             style="height:24px;opacity:0.85;filter:brightness(0) invert(1);" onerror="this.style.display='none'">
+    </div>
     <nav class="nav">
         <a href="/">🏠 POS</a>
-        <a href="/productos">📦 Productos</a>
+        <a href="/productos">📦 Inventario</a>
         <a href="/proveedores">🚛 Proveedores</a>
         <a href="/reportes">📊 Reportes</a>
         <a href="/ticket" class="active">🧾 Tickets</a>
@@ -220,7 +224,7 @@
 
             <div class="ticket-papel">
                 <div class="ticket-papel-header">
-                    <h2>🏪 FERRETERÍA GARCÍA</h2>
+                    <h2>🔧 TLAPALERÍA EL MIRADOR</h2>
                     <p>Tel: 55-1234-5678</p>
                     <div class="ticket-num-grande">${t.numero}</div>
                 </div>
