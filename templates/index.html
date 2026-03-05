@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ferretería El Mirador - POS</title>
+    <title>Ferretería - POS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
         .header { background: #16213e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
         .header h1 { color: #e94560; font-size: 22px; }
-        .nav { display: flex; gap: 8px; }
-        .nav a { color: #888; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 14px; transition: all 0.2s; }
-        .nav a:hover { background: #1a1a2e; color: white; }
-        .nav a.active { background: #e94560; color: white; }
         .container { display: flex; height: calc(100vh - 60px); }
         .panel-productos { flex: 1; padding: 20px; overflow-y: auto; }
         .buscar { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e94560; background: #16213e; color: white; font-size: 16px; margin-bottom: 20px; }
@@ -66,20 +62,7 @@
 <body>
 
 <div class="header">
-    <div style="display:flex; align-items:center; gap:14px">
-        <h1>🏪 Ferretería El Mirador</h1>
-        <img src="https://brandfetch.com/api/v2/brand/truper.com?type=logo" 
-             onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Truper_logo.svg/320px-Truper_logo.svg.png'"
-             alt="Truper" 
-             style="height:28px; opacity:0.85; filter:brightness(0) invert(1);">
-    </div>
-    <nav class="nav">
-        <a href="/" class="active">🏠 POS</a>
-        <a href="/productos">📦 Productos</a>
-        <a href="/proveedores">🚛 Proveedores</a>
-        <a href="/reportes">📊 Reportes</a>
-        <a href="/ticket">🧾 Tickets</a>
-    </nav>
+    <h1>🏪 Ferretería García</h1>
     <span id="fecha"></span>
 </div>
 
@@ -126,7 +109,7 @@
 <!-- Ticket impreso -->
 <div class="ticket-impreso" id="ticket-impreso">
     <div class="ticket-papel">
-        <h2>🏪 FERRETERÍA EL MIRADOR</h2>
+        <h2>🏪 FERRETERÍA GARCÍA</h2>
         <p>Tel: 55-1234-5678</p>
         <p id="t-fecha"></p>
         <hr>
@@ -150,12 +133,10 @@
 <script>
     let carrito = [];
     let metodo = 'efectivo';
-    let numTicket = parseInt(localStorage.getItem('numTicket') || '1');
 
     const fecha = new Date();
     document.getElementById('fecha').textContent = fecha.toLocaleDateString('es-MX', 
         {weekday:'long', year:'numeric', month:'long', day:'numeric'});
-    document.getElementById('num-ticket').textContent = String(numTicket).padStart(4, '0');
 
     async function cargarProductos() {
         try {
@@ -331,9 +312,10 @@
         });
         document.getElementById('t-items').innerHTML = html;
         document.getElementById('ticket-impreso').classList.add('activo');
-        numTicket++;
-        localStorage.setItem('numTicket', numTicket);
-        document.getElementById('num-ticket').textContent = String(numTicket).padStart(4, '0');
+        // Usar el número real del servidor, y el siguiente será +1
+        const ticketActual = ticket.id;
+        const siguienteTicket = ticketActual + 1;
+        document.getElementById('num-ticket').textContent = String(siguienteTicket).padStart(4, '0');
     }
 
     function nuevaVenta() {
