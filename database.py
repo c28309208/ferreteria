@@ -1,7 +1,6 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 import time
 
 scope = [
@@ -12,11 +11,14 @@ scope = [
 import os
 import json
 
+# DESPUÉS
 creds_json = os.environ.get('CREDENCIALES')
 if creds_json:
+    # En Railway - lee desde variable de entorno
     creds_dict = json.loads(creds_json)
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 else:
+    # Local - lee desde archivo
     creds = ServiceAccountCredentials.from_json_keyfile_name('credenciales.json', scope)
 
 client = gspread.authorize(creds)
@@ -67,73 +69,6 @@ def buscar_producto(query):
     query = query.lower()
     return [p for p in productos if query in str(p.get('nombre', '')).lower()]
 
-def crear_producto(data):
-    global cache_productos, cache_tiempo
-    try:
-        sheet = get_sheet_productos()
-        todos = sheet.get_all_records()
-        # Generar nuevo ID
-        nuevo_id = max([int(r.get('id', 0)) for r in todos], default=0) + 1
-        sheet.append_row([
-            nuevo_id,
-            data.get('nombre', ''),
-            float(data.get('precio', 0)),
-            int(data.get('stock', 0)),
-            int(data.get('minimo', 5))
-        ])
-        cache_productos = []
-        cache_tiempo = 0
-        return {'ok': True, 'id': nuevo_id}
-    except Exception as e:
-        return {'error': str(e)}
-
-def actualizar_producto(id, data):
-    global cache_productos, cache_tiempo
-    try:
-        sheet = get_sheet_productos()
-        todos = sheet.get_all_values()  # incluye encabezado
-        fila_num = None
-        producto_actual = None
-        records = sheet.get_all_records()
-        for i, r in enumerate(records):
-            if str(r.get('id')) == str(id):
-                fila_num = i + 2  # +1 encabezado, +1 base 1
-                producto_actual = r
-                break
-        if not fila_num:
-            return {'error': 'Producto no encontrado'}
-        sheet.update(f'A{fila_num}:E{fila_num}', [[
-            id,
-            data.get('nombre', producto_actual.get('nombre', '')),
-            float(data.get('precio', producto_actual.get('precio', 0))),
-            int(data.get('stock', producto_actual.get('stock', 0))),
-            int(data.get('minimo', producto_actual.get('minimo', 5)))
-        ]])
-        cache_productos = []
-        cache_tiempo = 0
-        return {'ok': True}
-    except Exception as e:
-        return {'error': str(e)}
-
-def eliminar_producto(id):
-    global cache_productos, cache_tiempo
-    try:
-        sheet = get_sheet_productos()
-        records = sheet.get_all_records()
-        fila_num = None
-        for i, r in enumerate(records):
-            if str(r.get('id')) == str(id):
-                fila_num = i + 2
-                break
-        if not fila_num:
-            return {'error': 'Producto no encontrado'}
-        sheet.delete_rows(fila_num)
-        cache_productos = []
-        cache_tiempo = 0
-        return {'ok': True}
-    except Exception as e:
-        return {'error': str(e)}
-
 # ─────────────────────────────────────────
 # VENTAS
 # ─────────────────────────────────────────
@@ -145,7 +80,7 @@ def get_reporte(filtro='hoy'):
     except Exception as e:
         return {'error': f'Error al obtener reporte: {e}'}
 
-    hoy = datetime.now(ZoneInfo('America/Mexico_City'))
+    hoy = datetime.now()
 
     if filtro == 'hoy':
         fecha_desde = hoy.strftime('%d/%m/%Y')
@@ -169,9 +104,11 @@ def get_reporte(filtro='hoy'):
     else:
         ventas_filtradas = registros
 
+    # Totales
     total_vendido = sum(float(r.get('Subtotal', 0)) for r in ventas_filtradas)
     num_tickets = len(set(str(r.get('Ticket', '')) for r in ventas_filtradas))
 
+    # Productos más vendidos
     productos_vendidos = {}
     for r in ventas_filtradas:
         nombre = r.get('Producto', 'Desconocido')
@@ -183,6 +120,7 @@ def get_reporte(filtro='hoy'):
 
     top_productos = sorted(productos_vendidos.items(), key=lambda x: x[1], reverse=True)[:5]
 
+    # Ventas por método de pago
     metodos = {}
     for r in ventas_filtradas:
         m = str(r.get('Metodo_pago', 'desconocido'))
@@ -197,7 +135,7 @@ def get_reporte(filtro='hoy'):
         'num_productos': len(ventas_filtradas),
         'top_productos': top_productos,
         'metodos': metodos,
-        'ventas': ventas_filtradas
+        'ventas': ventas_filtradas[-20:]
     }
 
 def procesar_venta(data):
@@ -216,41 +154,44 @@ def procesar_venta(data):
     except Exception as e:
         return {'error': f'Error de conexión con Google Sheets: {e}'}
 
+    # --- Validaciones previas ---
     errores = []
     for item in items:
         producto_id = item.get('id')
         cantidad = item.get('cantidad', 0)
+
         if not producto_id:
             errores.append('Producto sin ID')
             continue
+
         producto = next((p for p in productos if str(p.get('id')) == str(producto_id)), None)
+
         if not producto:
             errores.append(f'Producto con ID {producto_id} no encontrado')
             continue
+
         try:
             stock_actual = int(producto.get('stock', 0))
         except:
             stock_actual = 0
+
         if stock_actual < cantidad:
             errores.append(f"Stock insuficiente: {producto['nombre']} (disponible: {stock_actual})")
 
     if errores:
         return {'error': errores[0]}
 
+    # --- Generar número de ticket ---
     try:
-        todas_ventas = sheet_ventas.get_all_records()
-        if todas_ventas:
-            # Contar tickets únicos, no filas
-            tickets_unicos = set(str(r.get('Ticket', '')) for r in todas_ventas if r.get('Ticket'))
-            num_ticket = len(tickets_unicos) + 1
-        else:
-            num_ticket = 1
+        todas_ventas = sheet_ventas.get_all_values()
+        num_ticket = max(len(todas_ventas) - 1, 0) + 1
     except:
         num_ticket = int(time.time())
 
-    fecha_hora = datetime.now(ZoneInfo('America/Mexico_City')).strftime('%d/%m/%Y %H:%M')
+    fecha_hora = datetime.now().strftime('%d/%m/%Y %H:%M')
     all_rows = sheet_productos.get_all_values()
 
+    # --- Calcular total del ticket completo primero ---
     total = 0
     for item in items:
         producto_id = item.get('id')
@@ -259,6 +200,7 @@ def procesar_venta(data):
         if producto:
             total += float(producto['precio']) * cantidad
 
+    # --- Registrar cada línea y actualizar stock ---
     detalle = []
     for item in items:
         producto_id = item.get('id')
@@ -268,6 +210,7 @@ def procesar_venta(data):
         if producto:
             subtotal = float(producto['precio']) * cantidad
 
+            # Actualizar stock
             for i, row in enumerate(all_rows):
                 if row[0] == str(producto_id):
                     nuevo_stock = int(producto.get('stock', 0)) - cantidad
@@ -277,6 +220,7 @@ def procesar_venta(data):
                         print(f"Error actualizando stock: {e}")
                     break
 
+            # Guardar fila en hoja Ventas
             try:
                 sheet_ventas.append_row([
                     fecha_hora,
@@ -285,7 +229,7 @@ def procesar_venta(data):
                     cantidad,
                     float(producto['precio']),
                     subtotal,
-                    round(total, 2),
+                    round(total, 2),   # Total correcto del ticket completo
                     metodo
                 ])
             except Exception as e:
@@ -298,6 +242,7 @@ def procesar_venta(data):
                 'subtotal': subtotal
             })
 
+    # Limpiar caché
     cache_productos = []
     cache_tiempo = 0
 
@@ -315,6 +260,7 @@ def get_proveedores():
     try:
         sheet = get_sheet_proveedores()
         registros = sheet.get_all_records()
+        print(registros)
         for i, r in enumerate(registros):
             r['id'] = i + 1
         return {'proveedores': registros}
@@ -343,7 +289,7 @@ def actualizar_proveedor(id, data):
         if id < 1 or id > len(registros):
             return {'error': 'Proveedor no encontrado'}
         actual = registros[id - 1]
-        fila = id + 1
+        fila = id + 1  # +1 por encabezado
         sheet.update(f'A{fila}:F{fila}', [[
             data.get('proveedor', actual.get('proveedor', '')),
             data.get('producto', actual.get('producto', '')),
@@ -363,126 +309,3 @@ def eliminar_proveedor(id):
         return {'ok': True}
     except Exception as e:
         return {'error': str(e)}
-
-# ─────────────────────────────────────────
-# HOJAS USUARIOS Y LOGS
-# ─────────────────────────────────────────
-
-def get_sheet_usuarios():
-    sheet = client.open_by_key(SHEET_ID)
-    try:
-        return sheet.worksheet('Usuarios')
-    except:
-        # Crear hoja si no existe
-        ws = sheet.add_worksheet(title='Usuarios', rows=100, cols=5)
-        ws.append_row(['usuario', 'password_hash', 'rol', 'nombre', 'activo'])
-        return ws
-
-def get_sheet_logs():
-    sheet = client.open_by_key(SHEET_ID)
-    try:
-        return sheet.worksheet('Logs')
-    except:
-        ws = sheet.add_worksheet(title='Logs', rows=5000, cols=4)
-        ws.append_row(['Fecha', 'Usuario', 'Accion', 'Detalle'])
-        return ws
-
-# ─────────────────────────────────────────
-# USUARIOS
-# ─────────────────────────────────────────
-
-def _hash(password):
-    import hashlib, os
-    salt = os.environ.get('SECRET_KEY', 'tlapaleria2026')
-    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
-
-def verificar_login(usuario, password):
-    try:
-        sheet = get_sheet_usuarios()
-        registros = sheet.get_all_records()
-        print(f"DEBUG: buscando usuario '{usuario}', registros: {len(registros)}")
-        for r in registros:
-            print(f"DEBUG: comparando con '{r.get('usuario')}', hash_guardado={r.get('password_hash','')[:10]}..., hash_calculado={_hash(password)[:10]}...")
-            if str(r.get('usuario', '')).lower() == usuario.lower():
-                if str(r.get('activo', '1')) in ('0', 0, False, 'False', 'false'):
-                    return None
-                if r.get('password_hash') == _hash(password):
-                    return {'rol': r.get('rol', 'empleado'), 'nombre': r.get('nombre', usuario)}
-        return None
-    except Exception as e:
-        print(f"Error verificar_login: {e}")
-        return None
-
-def get_usuarios():
-    try:
-        sheet = get_sheet_usuarios()
-        registros = sheet.get_all_records()
-        # No devolver el hash
-        return [{'usuario': r['usuario'], 'rol': r.get('rol','empleado'), 'nombre': r.get('nombre',''), 'activo': r.get('activo',1)} for r in registros]
-    except Exception as e:
-        return []
-
-def crear_usuario(data):
-    try:
-        usuario = data.get('usuario', '').strip().lower()
-        password = data.get('password', '')
-        rol = data.get('rol', 'empleado')
-        nombre = data.get('nombre', usuario)
-        if not usuario or not password:
-            return {'error': 'Usuario y contraseña son obligatorios'}
-        sheet = get_sheet_usuarios()
-        existentes = sheet.get_all_records()
-        if any(str(r.get('usuario','')).lower() == usuario for r in existentes):
-            return {'error': 'El usuario ya existe'}
-        sheet.append_row([usuario, _hash(password), rol, nombre, 1])
-        return {'ok': True}
-    except Exception as e:
-        return {'error': str(e)}
-
-def eliminar_usuario(usuario):
-    try:
-        sheet = get_sheet_usuarios()
-        registros = sheet.get_all_records()
-        for i, r in enumerate(registros):
-            if str(r.get('usuario', '')).lower() == usuario.lower():
-                if r.get('rol') == 'admin':
-                    return {'error': 'No puedes eliminar al admin'}
-                sheet.delete_rows(i + 2)
-                return {'ok': True}
-        return {'error': 'Usuario no encontrado'}
-    except Exception as e:
-        return {'error': str(e)}
-
-def cambiar_password(usuario, nueva_password):
-    try:
-        if not nueva_password or len(nueva_password) < 4:
-            return {'error': 'La contraseña debe tener al menos 4 caracteres'}
-        sheet = get_sheet_usuarios()
-        registros = sheet.get_all_records()
-        for i, r in enumerate(registros):
-            if str(r.get('usuario', '')).lower() == usuario.lower():
-                sheet.update_cell(i + 2, 2, _hash(nueva_password))
-                return {'ok': True}
-        return {'error': 'Usuario no encontrado'}
-    except Exception as e:
-        return {'error': str(e)}
-
-# ─────────────────────────────────────────
-# LOGS
-# ─────────────────────────────────────────
-
-def registrar_log(usuario, accion, detalle=''):
-    try:
-        sheet = get_sheet_logs()
-        fecha = datetime.now(ZoneInfo('America/Mexico_City')).strftime('%d/%m/%Y %H:%M:%S')
-        sheet.append_row([fecha, usuario, accion, str(detalle)])
-    except Exception as e:
-        print(f"Error log: {e}")
-
-def get_logs():
-    try:
-        sheet = get_sheet_logs()
-        registros = sheet.get_all_records()
-        return list(reversed(registros))  # más reciente primero
-    except Exception as e:
-        return []
