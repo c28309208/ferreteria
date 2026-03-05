@@ -1,6 +1,7 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import time
 
 scope = [
@@ -144,7 +145,7 @@ def get_reporte(filtro='hoy'):
     except Exception as e:
         return {'error': f'Error al obtener reporte: {e}'}
 
-    hoy = datetime.now()
+    hoy = datetime.now(ZoneInfo('America/Mexico_City'))
 
     if filtro == 'hoy':
         fecha_desde = hoy.strftime('%d/%m/%Y')
@@ -247,7 +248,7 @@ def procesar_venta(data):
     except:
         num_ticket = int(time.time())
 
-    fecha_hora = datetime.now().strftime('%d/%m/%Y %H:%M')
+    fecha_hora = datetime.now(ZoneInfo('America/Mexico_City')).strftime('%d/%m/%Y %H:%M')
     all_rows = sheet_productos.get_all_values()
 
     total = 0
