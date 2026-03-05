@@ -300,7 +300,7 @@ def _hash(password):
     return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
 
 
-    def verificar_login(usuario, password):
+  
     # TEMPORAL - borrar después
     if usuario == 'admin' and password == 'admin1234':
         return {'rol': 'admin', 'nombre': 'Administrador'}
