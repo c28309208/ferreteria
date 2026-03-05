@@ -88,6 +88,9 @@
         <a href="/proveedores">🚛 Proveedores</a>
         <a href="/reportes">📊 Reportes</a>
         <a href="/ticket">🧾 Tickets</a>
+        <a href="/usuarios" id="nav-usuarios" style="display:none">👥 Usuarios</a>
+        <a href="/logs" id="nav-logs" style="display:none">📋 Logs</a>
+        <a href="/logout" style="background:#2a2a4a;color:#ff6b6b;">⏏ Salir</a>
     </nav>
 </div>
 
@@ -279,6 +282,18 @@
     }
 
     cargar();
+</script>
+
+<script>
+    // Mostrar opciones de admin si corresponde
+    fetch('/api/sesion').then(r => r.json()).then(s => {
+        if (s.rol === 'admin') {
+            const u = document.getElementById('nav-usuarios');
+            const l = document.getElementById('nav-logs');
+            if (u) u.style.display = '';
+            if (l) l.style.display = '';
+        }
+    }).catch(() => {});
 </script>
 </body>
 </html>
