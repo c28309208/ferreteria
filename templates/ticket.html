@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickets — Ferretería García</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+
+        .header { background: #16213e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
+        .header h1 { color: #e94560; font-size: 22px; }
+        .nav { display: flex; gap: 10px; }
+        .nav a { color: #888; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 14px; transition: all 0.2s; }
+        .nav a:hover { background: #1a1a2e; color: white; }
+        .nav a.active { background: #e94560; color: white; }
+
+        .container { display: flex; height: calc(100vh - 62px); }
+
+        /* Panel izquierdo - lista de tickets */
+        .panel-lista { width: 380px; border-right: 2px solid #e94560; display: flex; flex-direction: column; background: #16213e; }
+        .panel-lista-header { padding: 18px; border-bottom: 1px solid #2a2a4a; }
+        .panel-lista-header h2 { font-size: 16px; color: #e94560; margin-bottom: 12px; }
+        .filtros { display: flex; gap: 6px; }
+        .btn-filtro { flex: 1; padding: 8px; border-radius: 8px; border: 2px solid #2a2a4a; background: transparent; color: #888; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .btn-filtro.activo { border-color: #e94560; background: #e94560; color: white; }
+
+        .lista-tickets { flex: 1; overflow-y: auto; }
+        .ticket-row { padding: 15px 18px; border-bottom: 1px solid #1a1a2e; cursor: pointer; transition: background 0.15s; }
+        .ticket-row:hover { background: #1e2240; }
+        .ticket-row.seleccionado { background: #1e2240; border-left: 3px solid #e94560; }
+        .ticket-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .ticket-num { font-weight: bold; color: #e94560; font-size: 15px; }
+        .ticket-total-lista { font-weight: bold; color: #4ecca3; }
+        .ticket-fecha { font-size: 12px; color: #666; }
+        .ticket-metodo { font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #2a2a4a; color: #aaa; }
+
+        .sin-datos { text-align: center; padding: 40px 20px; color: #555; }
+
+        /* Panel derecho - detalle */
+        .panel-detalle { flex: 1; padding: 25px; overflow-y: auto; }
+        .panel-detalle.vacio { display: flex; align-items: center; justify-content: center; }
+        .placeholder { text-align: center; color: #444; }
+        .placeholder h2 { font-size: 48px; margin-bottom: 15px; }
+        .placeholder p { font-size: 16px; }
+
+        .ticket-papel { background: #16213e; border-radius: 15px; padding: 30px; max-width: 500px; margin: 0 auto; border: 2px solid #2a2a4a; }
+        .ticket-papel-header { text-align: center; border-bottom: 2px dashed #2a2a4a; padding-bottom: 20px; margin-bottom: 20px; }
+        .ticket-papel-header h2 { font-size: 22px; color: #e94560; }
+        .ticket-papel-header p { color: #666; font-size: 13px; margin-top: 4px; }
+        .ticket-num-grande { font-size: 28px; font-weight: bold; margin: 8px 0; }
+        .ticket-info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .ticket-info-row span:first-child { color: #888; }
+        .items-lista { margin: 20px 0; }
+        .item-line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a2e; font-size: 14px; }
+        .item-line:last-child { border-bottom: none; }
+        .item-name { flex: 1; }
+        .item-cant { color: #888; margin: 0 15px; }
+        .item-sub { color: #e94560; font-weight: bold; }
+        .ticket-totales { border-top: 2px dashed #2a2a4a; padding-top: 15px; margin-top: 10px; }
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #888; }
+        .total-final-row { display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; margin: 12px 0; }
+        .metodo-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        .metodo-efectivo { background: #1a3a2e; color: #4ecca3; }
+        .metodo-tarjeta { background: #1a2a3e; color: #7ab3ff; }
+        .metodo-transferencia { background: #2a1a3e; color: #c47aff; }
+        .btn-imprimir { width: 100%; padding: 13px; background: #e94560; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .btn-imprimir:hover { background: #c73652; }
+
+        /* Stats arriba del detalle */
+        .detalle-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .d-stat { background: #16213e; border-radius: 10px; padding: 15px; text-align: center; }
+        .d-stat-num { font-size: 22px; font-weight: bold; color: #e94560; }
+        .d-stat-label { font-size: 12px; color: #666; margin-top: 3px; }
+
+        @media print {
+            .header, .panel-lista, .btn-imprimir, .detalle-stats { display: none; }
+            .container { display: block; }
+            .panel-detalle { padding: 10px; }
+            .ticket-papel { border: none; box-shadow: none; background: white; color: black; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🏪 Ferretería García</h1>
+    <nav class="nav">
+        <a href="/">🏠 POS</a>
+        <a href="/productos">📦 Productos</a>
+        <a href="/proveedores">🚛 Proveedores</a>
+        <a href="/reportes">📊 Reportes</a>
+        <a href="/ticket" class="active">🧾 Tickets</a>
+    </nav>
+</div>
+
+<div class="container">
+
+    <!-- Lista de tickets -->
+    <div class="panel-lista">
+        <div class="panel-lista-header">
+            <h2>🧾 Historial de Tickets</h2>
+            <div class="filtros">
+                <button class="btn-filtro activo" onclick="cambiarFiltro(this,'hoy')">Hoy</button>
+                <button class="btn-filtro" onclick="cambiarFiltro(this,'semana')">Semana</button>
+                <button class="btn-filtro" onclick="cambiarFiltro(this,'mes')">Mes</button>
+                <button class="btn-filtro" onclick="cambiarFiltro(this,'todo')">Todo</button>
+            </div>
+        </div>
+        <div class="lista-tickets" id="lista-tickets">
+            <div class="sin-datos">Cargando... ⏳</div>
+        </div>
+    </div>
+
+    <!-- Detalle del ticket -->
+    <div class="panel-detalle vacio" id="panel-detalle">
+        <div class="placeholder">
+            <h2>🧾</h2>
+            <p>Selecciona un ticket para ver el detalle</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let ventas = [];
+    let tickets = {};
+    let filtroActual = 'hoy';
+    let ticketSeleccionado = null;
+
+    async function cargar() {
+        try {
+            const res = await fetch(`/api/reporte?filtro=${filtroActual}`);
+            const data = await res.json();
+            ventas = data.ventas || [];
+            agruparTickets();
+            renderizarLista();
+        } catch(e) {
+            document.getElementById('lista-tickets').innerHTML = '<div class="sin-datos">Error cargando ❌</div>';
+        }
+    }
+
+    function agruparTickets() {
+        tickets = {};
+        ventas.forEach(v => {
+            const num = v.Ticket || v.ticket || '—';
+            if (!tickets[num]) {
+                tickets[num] = {
+                    numero: num,
+                    fecha: v.Fecha || v.fecha || '—',
+                    metodo: v.Metodo_pago || v.metodo_pago || 'efectivo',
+                    total: parseFloat(v.Total || v.total || 0),
+                    items: []
+                };
+            }
+            tickets[num].items.push({
+                nombre: v.Producto || v.producto || '—',
+                cantidad: v.Cantidad || v.cantidad || 1,
+                precio: parseFloat(v.Precio || v.precio || 0),
+                subtotal: parseFloat(v.Subtotal || v.subtotal || 0)
+            });
+        });
+    }
+
+    function renderizarLista() {
+        const lista = document.getElementById('lista-tickets');
+        const keys = Object.keys(tickets).reverse();
+
+        if (keys.length === 0) {
+            lista.innerHTML = '<div class="sin-datos">No hay tickets en este periodo 📭</div>';
+            return;
+        }
+
+        lista.innerHTML = keys.map(k => {
+            const t = tickets[k];
+            const iconMetodo = t.metodo === 'tarjeta' ? '💳' : t.metodo === 'transferencia' ? '📱' : '💵';
+            return `
+                <div class="ticket-row" id="row-${k}" onclick="seleccionar('${k}')">
+                    <div class="ticket-row-top">
+                        <span class="ticket-num">${t.numero}</span>
+                        <span class="ticket-total-lista">$${t.total.toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center">
+                        <span class="ticket-fecha">${t.fecha}</span>
+                        <span class="ticket-metodo">${iconMetodo} ${t.metodo}</span>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    function seleccionar(num) {
+        // Quitar selección anterior
+        if (ticketSeleccionado) {
+            const prev = document.getElementById(`row-${ticketSeleccionado}`);
+            if (prev) prev.classList.remove('seleccionado');
+        }
+        ticketSeleccionado = num;
+        const row = document.getElementById(`row-${num}`);
+        if (row) row.classList.add('seleccionado');
+        mostrarDetalle(tickets[num]);
+    }
+
+    function mostrarDetalle(t) {
+        const panel = document.getElementById('panel-detalle');
+        panel.classList.remove('vacio');
+
+        const subtotalBruto = t.items.reduce((s, i) => s + i.subtotal, 0);
+        const iva = subtotalBruto * 0.16 / 1.16;
+        const subtotalSinIva = subtotalBruto - iva;
+
+        const iconMetodo = t.metodo === 'tarjeta' ? '💳' : t.metodo === 'transferencia' ? '📱' : '💵';
+        const claseMetodo = `metodo-${t.metodo}`;
+
+        panel.innerHTML = `
+            <div class="detalle-stats">
+                <div class="d-stat"><div class="d-stat-num">${t.items.length}</div><div class="d-stat-label">Productos</div></div>
+                <div class="d-stat"><div class="d-stat-num">$${t.total.toFixed(2)}</div><div class="d-stat-label">Total</div></div>
+                <div class="d-stat"><div class="d-stat-num">${iconMetodo}</div><div class="d-stat-label">${t.metodo}</div></div>
+            </div>
+
+            <div class="ticket-papel">
+                <div class="ticket-papel-header">
+                    <h2>🏪 FERRETERÍA GARCÍA</h2>
+                    <p>Tel: 55-1234-5678</p>
+                    <div class="ticket-num-grande">${t.numero}</div>
+                </div>
+
+                <div class="ticket-info-row"><span>Fecha</span><span>${t.fecha}</span></div>
+                <div class="ticket-info-row"><span>Método de pago</span><span class="metodo-badge ${claseMetodo}">${iconMetodo} ${t.metodo}</span></div>
+
+                <div class="items-lista">
+                    ${t.items.map(i => `
+                        <div class="item-line">
+                            <span class="item-name">${i.nombre}</span>
+                            <span class="item-cant">x${i.cantidad}</span>
+                            <span class="item-sub">$${i.subtotal.toFixed(2)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="ticket-totales">
+                    <div class="total-row"><span>Subtotal</span><span>$${subtotalSinIva.toFixed(2)}</span></div>
+                    <div class="total-row"><span>IVA (16%)</span><span>$${iva.toFixed(2)}</span></div>
+                    <div class="total-final-row"><span>TOTAL</span><span style="color:#4ecca3">$${t.total.toFixed(2)}</span></div>
+                </div>
+
+                <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir Ticket</button>
+            </div>`;
+    }
+
+    function cambiarFiltro(btn, filtro) {
+        filtroActual = filtro;
+        document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+        ticketSeleccionado = null;
+        document.getElementById('panel-detalle').classList.add('vacio');
+        document.getElementById('panel-detalle').innerHTML = `
+            <div class="placeholder">
+                <h2>🧾</h2>
+                <p>Selecciona un ticket para ver el detalle</p>
+            </div>`;
+        cargar();
+    }
+
+    cargar();
+</script>
+</body>
+</html>
