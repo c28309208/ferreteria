@@ -41,9 +41,9 @@ def get_sheet_proveedores():
 def get_sheet_usuarios():
     sheet = client.open_by_key(SHEET_ID)
     try:
-        return sheet.worksheet('Usuarios')
+        return sheet.worksheet('usuarios')
     except:
-        ws = sheet.add_worksheet(title='Usuarios', rows=100, cols=5)
+        ws = sheet.add_worksheet(title='usuarios', rows=100, cols=5)
         ws.append_row(['usuario', 'password_hash', 'rol', 'nombre', 'activo'])
         return ws
 
