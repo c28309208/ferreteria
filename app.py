@@ -215,7 +215,7 @@ def cambiar_password(usuario):
 def logs():
     if session.get('rol') != 'admin':
         return redirect(url_for('index'))
-    return render_template('logs.html')
+    return render_template('Logs.html')
 
 @app.route('/api/logs')
 @solo_admin
