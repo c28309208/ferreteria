@@ -179,7 +179,7 @@ def eliminar_proveedor(id):
 def usuarios():
     if session.get('rol') != 'admin':
         return redirect(url_for('index'))
-    return render_template('usuarios.html')
+    return render_template('Usuarios.html')
 
 @app.route('/api/usuarios', methods=['GET'])
 @solo_admin
