@@ -102,7 +102,7 @@
         </div>
         <div class="ticket-total">
             <div class="total-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
-            <div class="total-row"><span>IVA (16%)</span><span id="iva">$0.00</span></div>
+            <div class="total-row" style="font-size:11px; color:#666;"><span>Precios incluyen IVA</span></div>
             <div class="total-final"><span>TOTAL</span><span id="total">$0.00</span></div>
             <button class="btn-cobrar" onclick="abrirCobro()">💰 COBRAR</button>
             <button class="btn-limpiar" onclick="limpiarTicket()">🗑️ Limpiar</button>
@@ -137,6 +137,7 @@
         <div id="t-items"></div>
         <hr>
         <div class="t-total"><span>TOTAL:</span><span id="t-total"></span></div>
+        <div style="font-size:11px; color:#888; text-align:center; margin: 4px 0;">Precios incluyen IVA</div>
         <div class="t-total" style="color:#666; font-weight:normal; font-size:13px">
             <span>Pagó:</span><span id="t-pago"></span>
         </div>
@@ -224,30 +225,26 @@
         if (carrito.length === 0) {
             container.innerHTML = '<p style="color:#888; text-align:center; margin-top:50px">Selecciona productos 👆</p>';
             document.getElementById('subtotal').textContent = '$0.00';
-            document.getElementById('iva').textContent = '$0.00';
             document.getElementById('total').textContent = '$0.00';
             return;
         }
         let html = '';
-        let subtotal = 0;
+        let total = 0;
         carrito.forEach(item => {
             const sub = item.precio * item.cantidad;
-            subtotal += sub;
+            total += sub;
             html += `
                 <div class="ticket-item">
                     <div class="ticket-item-info">
                         <strong>${item.nombre}</strong><br>
                         <span>${item.cantidad} x $${item.precio}</span>
                     </div>
-                    <div class="ticket-item-precio">$${sub}</div>
+                    <div class="ticket-item-precio">$${sub.toFixed(2)}</div>
                     <button class="btn-quitar" onclick="quitarDelCarrito(${item.id})">×</button>
                 </div>`;
         });
-        const iva = subtotal * 0.16;
-        const total = subtotal + iva;
         container.innerHTML = html;
-        document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
-        document.getElementById('iva').textContent = `$${iva.toFixed(2)}`;
+        document.getElementById('subtotal').textContent = `$${total.toFixed(2)}`;
         document.getElementById('total').textContent = `$${total.toFixed(2)}`;
     }
 
@@ -354,7 +351,6 @@
 </script>
 
 <script>
-    // Mostrar opciones de admin si corresponde
     fetch('/api/sesion').then(r => r.json()).then(s => {
         if (s.rol === 'admin') {
             const u = document.getElementById('nav-usuarios');
