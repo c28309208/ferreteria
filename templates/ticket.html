@@ -147,18 +147,9 @@
         }
     }
 
-    // Corrige hora de UTC a México (UTC-6)
+    // Las fechas ya se guardan en hora CDMX desde el servidor, se usan tal cual
     function corregirHora(fechaStr) {
-        if (!fechaStr || fechaStr === '—') return fechaStr;
-        try {
-            // Formato esperado: "05/03/2026 19:18"
-            const partes = fechaStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
-            if (!partes) return fechaStr;
-            const [, dia, mes, anio, hora, min] = partes;
-            // Crear fecha en UTC y convertir a México
-            const utc = new Date(Date.UTC(parseInt(anio), parseInt(mes)-1, parseInt(dia), parseInt(hora), parseInt(min)));
-            return utc.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
-        } catch(e) { return fechaStr; }
+        return fechaStr;
     }
 
     function agruparTickets() {

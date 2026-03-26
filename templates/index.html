@@ -139,9 +139,12 @@
         <div class="t-total"><span>TOTAL:</span><span id="t-total"></span></div>
         <div style="font-size:11px; color:#888; text-align:center; margin: 4px 0;">Precios incluyen IVA</div>
         <div class="t-total" style="color:#666; font-weight:normal; font-size:13px">
+            <span>Forma de pago:</span><span id="t-metodo"></span>
+        </div>
+        <div class="t-total" style="color:#666; font-weight:normal; font-size:13px" id="row-pago">
             <span>Pagó:</span><span id="t-pago"></span>
         </div>
-        <div class="t-total" style="color:green">
+        <div class="t-total" style="color:green" id="row-cambio">
             <span>Cambio:</span><span id="t-cambio"></span>
         </div>
         <hr>
@@ -324,8 +327,21 @@
         const ahora = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
         document.getElementById('t-fecha').textContent = ahora;
         document.getElementById('t-total').textContent = `$${ticket.total.toFixed(2)}`;
-        document.getElementById('t-pago').textContent = `$${pago.toFixed(2)}`;
-        document.getElementById('t-cambio').textContent = `$${cambio.toFixed(2)}`;
+
+        // Forma de pago
+        const iconosMetodo = { efectivo: '💵 Efectivo', tarjeta: '💳 Tarjeta', transferencia: '📱 Transferencia' };
+        document.getElementById('t-metodo').textContent = iconosMetodo[metodo] || metodo;
+
+        // Mostrar Pagó y Cambio solo si es efectivo
+        if (metodo === 'efectivo') {
+            document.getElementById('row-pago').style.display = '';
+            document.getElementById('row-cambio').style.display = '';
+            document.getElementById('t-pago').textContent = `$${pago.toFixed(2)}`;
+            document.getElementById('t-cambio').textContent = `$${cambio.toFixed(2)}`;
+        } else {
+            document.getElementById('row-pago').style.display = 'none';
+            document.getElementById('row-cambio').style.display = 'none';
+        }
 
         let html = '';
         ticket.items.forEach(i => {
