@@ -137,8 +137,15 @@
         <div class="campo"><label>Stock actual</label><input type="number" id="f-stock" placeholder="0" min="0"></div>
         <div class="campo"><label>Stock mínimo</label><input type="number" id="f-minimo" placeholder="5" min="0"></div>
         <div class="campo">
-            <label>🖼️ URL de imagen (opcional)</label>
-            <input type="text" id="f-imagen" placeholder="https://...">
+            <label>🖼️ Imagen (opcional)</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="text" id="f-imagen" placeholder="https://... o sube una foto" style="flex:1;min-width:150px;">
+                <label style="background:#2a3a6a;color:#7ab3ff;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;border:none;">
+                    📁 Subir foto
+                    <input type="file" id="f-imagen-file" accept="image/*" style="display:none;" onchange="subirImagen(this)">
+                </label>
+            </div>
+            <div id="upload-status" style="font-size:12px;color:#4ecca3;margin-top:4px;display:none;"></div>
             <div id="preview-imagen" style="margin-top:8px; display:none;">
                 <img id="img-preview" src="" alt="Vista previa" style="max-width:100%; max-height:120px; border-radius:8px; object-fit:contain; background:#1a1a2e; padding:4px;">
             </div>
@@ -251,6 +258,42 @@
     document.getElementById('f-imagen').addEventListener('input', function() {
         mostrarPreviewImagen(this.value);
     });
+
+    async function subirImagen(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const id = document.getElementById('edit-id').value;
+        if (!id) {
+            alert('⚠️ Guarda el producto primero antes de subir una imagen.');
+            input.value = '';
+            return;
+        }
+        const status = document.getElementById('upload-status');
+        status.textContent = '⏳ Subiendo imagen...';
+        status.style.display = 'block';
+        status.style.color = '#888';
+
+        const form = new FormData();
+        form.append('imagen', file);
+        try {
+            const res = await fetch(`/api/productos/${id}/imagen/subir`, { method: 'POST', body: form });
+            const r = await res.json();
+            if (r.error) {
+                status.textContent = '❌ ' + r.error;
+                status.style.color = '#ff6b6b';
+                return;
+            }
+            document.getElementById('f-imagen').value = r.url;
+            mostrarPreviewImagen(r.url);
+            status.textContent = '✅ Imagen subida correctamente';
+            status.style.color = '#4ecca3';
+            setTimeout(() => { status.style.display = 'none'; }, 3000);
+        } catch(e) {
+            status.textContent = '❌ Error al subir la imagen';
+            status.style.color = '#ff6b6b';
+        }
+        input.value = '';
+    }
 
     function cerrarModal() {
         document.getElementById('modal').classList.remove('activo');

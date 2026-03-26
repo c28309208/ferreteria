@@ -329,6 +329,42 @@ def actualizar_imagen(id):
         database.registrar_log(usuario_actual(), 'IMAGEN PRODUCTO', f"ID {id} | URL: {imagen_url[:60]}")
     return jsonify(r)
 
+@app.route('/api/productos/<int:id>/imagen/subir', methods=['POST'])
+@login_requerido
+def subir_imagen(id):
+    if 'imagen' not in request.files:
+        return jsonify({'error': 'No se recibió imagen'}), 400
+    f = request.files['imagen']
+    if not f.filename:
+        return jsonify({'error': 'Archivo inválido'}), 400
+
+    # Validar tipo
+    allowed = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+    mimetype = f.mimetype or 'image/jpeg'
+    if mimetype not in allowed:
+        return jsonify({'error': 'Solo se permiten imágenes JPG, PNG, WEBP o GIF'}), 400
+
+    # Limitar tamaño: 5MB
+    file_bytes = f.read(5 * 1024 * 1024 + 1)
+    if len(file_bytes) > 5 * 1024 * 1024:
+        return jsonify({'error': 'La imagen no puede pesar más de 5MB'}), 400
+
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
+    filename = f'producto_{id}_{int(time.time())}.{ext}'
+
+    # Subir a Drive
+    resultado = database.subir_imagen_drive(file_bytes, filename, mimetype)
+    if 'error' in resultado:
+        return jsonify(resultado), 500
+
+    # Guardar URL en Google Sheets
+    r = database.actualizar_imagen_producto(id, resultado['url'])
+    if 'error' in r:
+        return jsonify(r), 500
+
+    database.registrar_log(usuario_actual(), 'IMAGEN SUBIDA', f"ID {id} | {filename}")
+    return jsonify({'ok': True, 'url': resultado['url']})
+
 if __name__ == '__main__':
     t = threading.Thread(target=keep_alive, daemon=True)
     t.start()

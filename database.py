@@ -5,6 +5,11 @@ from zoneinfo import ZoneInfo
 import time
 import os
 import json
+import io
+
+# Google Drive para imágenes
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 scope = [
     "https://spreadsheets.google.com/feeds",
@@ -21,6 +26,65 @@ else:
 client = gspread.authorize(creds)
 
 SHEET_ID = '1QdlBw-SsuvmhuCuex3RtXjUtkrO_nLJELQHVVYEfSfE'
+
+# ── Google Drive para imágenes ──
+_drive_service = None
+_carpeta_imagenes_id = None
+CARPETA_NOMBRE = 'Tlapaleria_Imagenes'
+
+def _get_drive():
+    global _drive_service
+    if _drive_service is None:
+        _drive_service = build('drive', 'v3', credentials=creds)
+    return _drive_service
+
+def _get_carpeta_imagenes():
+    """Obtiene o crea la carpeta de imágenes en Google Drive."""
+    global _carpeta_imagenes_id
+    if _carpeta_imagenes_id:
+        return _carpeta_imagenes_id
+    drive = _get_drive()
+    # Buscar carpeta existente
+    res = drive.files().list(
+        q=f"name='{CARPETA_NOMBRE}' and mimeType='application/vnd.google-apps.folder' and trashed=false",
+        fields='files(id)'
+    ).execute()
+    archivos = res.get('files', [])
+    if archivos:
+        _carpeta_imagenes_id = archivos[0]['id']
+    else:
+        # Crear carpeta
+        meta = {'name': CARPETA_NOMBRE, 'mimeType': 'application/vnd.google-apps.folder'}
+        folder = drive.files().create(body=meta, fields='id').execute()
+        _carpeta_imagenes_id = folder['id']
+        # Hacer la carpeta pública para lectura
+        drive.permissions().create(
+            fileId=_carpeta_imagenes_id,
+            body={'type': 'anyone', 'role': 'reader'}
+        ).execute()
+    return _carpeta_imagenes_id
+
+def subir_imagen_drive(file_bytes, filename, mimetype='image/jpeg'):
+    """
+    Sube una imagen a Google Drive y devuelve la URL pública.
+    """
+    try:
+        drive = _get_drive()
+        carpeta_id = _get_carpeta_imagenes()
+        media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mimetype, resumable=False)
+        meta = {'name': filename, 'parents': [carpeta_id]}
+        archivo = drive.files().create(body=meta, media_body=media, fields='id').execute()
+        file_id = archivo['id']
+        # Hacer el archivo público
+        drive.permissions().create(
+            fileId=file_id,
+            body={'type': 'anyone', 'role': 'reader'}
+        ).execute()
+        # URL directa para mostrar en img src
+        url = f'https://drive.google.com/thumbnail?id={file_id}&sz=w400'
+        return {'ok': True, 'url': url, 'id': file_id}
+    except Exception as e:
+        return {'error': str(e)}
 
 cache_productos = []
 cache_tiempo = 0
