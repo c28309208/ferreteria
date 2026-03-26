@@ -88,6 +88,7 @@
         <a href="/proveedores">🚛 Proveedores</a>
         <a href="/reportes">📊 Reportes</a>
         <a href="/ticket">🧾 Tickets</a>
+        <a href="/truper">🟡 Truper</a>
         <a href="/usuarios" id="nav-usuarios" style="display:none">👥 Usuarios</a>
         <a href="/logs" id="nav-logs" style="display:none">📋 Logs</a>
         <a href="/logout" style="background:#2a2a4a;color:#ff6b6b;">⏏ Salir</a>
@@ -110,6 +111,7 @@
     <table id="tabla">
         <thead>
             <tr>
+                <th>Img</th>
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Precio</th>
@@ -120,7 +122,7 @@
             </tr>
         </thead>
         <tbody id="tbody">
-            <tr><td colspan="7" class="sin-datos">Cargando... ⏳</td></tr>
+            <tr><td colspan="8" class="sin-datos">Cargando... ⏳</td></tr>
         </tbody>
     </table>
 </div>
@@ -134,6 +136,13 @@
         <div class="campo"><label>Precio ($)</label><input type="number" id="f-precio" placeholder="0.00" step="0.01" min="0"></div>
         <div class="campo"><label>Stock actual</label><input type="number" id="f-stock" placeholder="0" min="0"></div>
         <div class="campo"><label>Stock mínimo</label><input type="number" id="f-minimo" placeholder="5" min="0"></div>
+        <div class="campo">
+            <label>🖼️ URL de imagen (opcional)</label>
+            <input type="text" id="f-imagen" placeholder="https://...">
+            <div id="preview-imagen" style="margin-top:8px; display:none;">
+                <img id="img-preview" src="" alt="Vista previa" style="max-width:100%; max-height:120px; border-radius:8px; object-fit:contain; background:#1a1a2e; padding:4px;">
+            </div>
+        </div>
         <div class="modal-btns">
             <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
             <button class="btn btn-primary" onclick="guardar()">💾 Guardar</button>
@@ -185,11 +194,16 @@
     function renderizar() {
         const tbody = document.getElementById('tbody');
         if (filtrados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="sin-datos">No se encontraron productos 📦</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="sin-datos">No se encontraron productos 📦</td></tr>';
             return;
         }
-        tbody.innerHTML = filtrados.map(p => `
+        tbody.innerHTML = filtrados.map(p => {
+            const img = p.imagen
+                ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#1a1a2e;cursor:pointer;" onclick="verImagen('${p.imagen}')" onerror="this.style.display='none'">`
+                : `<span style="color:#444;font-size:18px;">📷</span>`;
+            return `
             <tr>
+                <td style="text-align:center;">${img}</td>
                 <td style="color:#555">#${p.id}</td>
                 <td><strong>${p.nombre}</strong></td>
                 <td class="precio">$${parseFloat(p.precio).toFixed(2)}</td>
@@ -202,8 +216,12 @@
                         <button class="btn-del" onclick="confirmarEliminar(${p.id}, '${p.nombre.replace(/'/g,"\\'")}')">🗑️</button>
                     </div>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
+    }
+
+    function verImagen(url) {
+        window.open(url, '_blank');
     }
 
     function abrirModal(p = null) {
@@ -213,8 +231,26 @@
         document.getElementById('f-precio').value = p ? p.precio : '';
         document.getElementById('f-stock').value = p ? p.stock : '';
         document.getElementById('f-minimo').value = p ? p.minimo : '';
+        const imgUrl = p ? (p.imagen || '') : '';
+        document.getElementById('f-imagen').value = imgUrl;
+        mostrarPreviewImagen(imgUrl);
         document.getElementById('modal').classList.add('activo');
     }
+
+    function mostrarPreviewImagen(url) {
+        const preview = document.getElementById('preview-imagen');
+        const img = document.getElementById('img-preview');
+        if (url && url.startsWith('http')) {
+            img.src = url;
+            preview.style.display = 'block';
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
+    document.getElementById('f-imagen').addEventListener('input', function() {
+        mostrarPreviewImagen(this.value);
+    });
 
     function cerrarModal() {
         document.getElementById('modal').classList.remove('activo');
@@ -231,7 +267,8 @@
             nombre: document.getElementById('f-nombre').value.trim(),
             precio: parseFloat(document.getElementById('f-precio').value),
             stock: parseInt(document.getElementById('f-stock').value),
-            minimo: parseInt(document.getElementById('f-minimo').value)
+            minimo: parseInt(document.getElementById('f-minimo').value),
+            imagen: document.getElementById('f-imagen').value.trim()
         };
 
         if (!data.nombre || isNaN(data.precio)) {

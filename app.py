@@ -4,6 +4,8 @@ import threading
 import time
 import urllib.request
 import os
+import uuid
+import tempfile
 from functools import wraps
 
 app = Flask(__name__)
@@ -227,6 +229,99 @@ def api_sesion():
     if 'usuario' in session:
         return jsonify({'usuario': session['usuario'], 'rol': session['rol'], 'nombre': session.get('nombre', '')})
     return jsonify({'usuario': None}), 401
+
+# ─────────────────────────────────────────
+# TRUPER
+# ─────────────────────────────────────────
+
+# Diccionario de trabajos de procesamiento en background
+truper_jobs = {}
+
+@app.route('/truper')
+@login_requerido
+def truper():
+    return render_template('truper.html')
+
+@app.route('/api/truper/catalogo')
+@login_requerido
+def api_truper_catalogo():
+    return jsonify(database.get_catalogo_truper())
+
+@app.route('/api/truper/subir', methods=['POST'])
+@login_requerido
+def api_truper_subir():
+    if 'pdf' not in request.files:
+        return jsonify({'error': 'No se recibió ningún archivo PDF'}), 400
+    f = request.files['pdf']
+    if not f.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'El archivo debe ser un PDF'}), 400
+
+    # Guardar PDF temporal
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    f.save(tmp.name)
+    tmp.close()
+
+    job_id = str(uuid.uuid4())[:8]
+    truper_jobs[job_id] = {'estado': 'procesando', 'progreso': 0, 'resultado': None}
+
+    def procesar():
+        from truper_parser import parse_pdf
+        from datetime import datetime
+
+        def actualizar_progreso(p):
+            truper_jobs[job_id]['progreso'] = p
+
+        try:
+            productos = parse_pdf(tmp.name, progress_callback=actualizar_progreso)
+            fecha = datetime.now(database.ZoneInfo('America/Mexico_City')).strftime('%d/%m/%Y %H:%M')
+            resultado = database.guardar_catalogo_truper(productos, fecha)
+            truper_jobs[job_id]['estado'] = 'listo'
+            truper_jobs[job_id]['resultado'] = resultado
+            database.registrar_log(session.get('usuario', 'sistema'), 'TRUPER SYNC',
+                                   f"PDF procesado: {resultado.get('total', 0)} productos")
+        except Exception as e:
+            truper_jobs[job_id]['estado'] = 'error'
+            truper_jobs[job_id]['resultado'] = {'error': str(e)}
+        finally:
+            try:
+                os.unlink(tmp.name)
+            except:
+                pass
+
+    t = threading.Thread(target=procesar, daemon=True)
+    t.start()
+
+    return jsonify({'job_id': job_id})
+
+@app.route('/api/truper/estado/<job_id>')
+@login_requerido
+def api_truper_estado(job_id):
+    job = truper_jobs.get(job_id)
+    if not job:
+        return jsonify({'error': 'Trabajo no encontrado'}), 404
+    return jsonify(job)
+
+@app.route('/api/truper/agregar', methods=['POST'])
+@login_requerido
+def api_truper_agregar():
+    r = database.agregar_desde_truper(request.json)
+    if 'ok' in r:
+        database.registrar_log(usuario_actual(), 'TRUPER AGREGAR',
+                               f"Agregado desde catálogo: {request.json.get('clave')} - {request.json.get('nombre')}")
+    return jsonify(r)
+
+# ─────────────────────────────────────────
+# IMÁGENES
+# ─────────────────────────────────────────
+
+@app.route('/api/productos/<int:id>/imagen', methods=['PUT'])
+@login_requerido
+def actualizar_imagen(id):
+    imagen_url = request.json.get('imagen', '')
+    r = database.actualizar_imagen_producto(id, imagen_url)
+    if 'ok' in r:
+        database.registrar_log(usuario_actual(), 'IMAGEN PRODUCTO', f"ID {id} | URL: {imagen_url[:60]}")
+    return jsonify(r)
 
 if __name__ == '__main__':
     t = threading.Thread(target=keep_alive, daemon=True)

@@ -372,6 +372,145 @@ def cambiar_password(usuario, nueva_password):
         return {'error': str(e)}
 
 # ─────────────────────────────────────────
+# TRUPER CATÁLOGO
+# ─────────────────────────────────────────
+
+def get_sheet_truper():
+    sheet = client.open_by_key(SHEET_ID)
+    try:
+        return sheet.worksheet('Truper')
+    except:
+        ws = sheet.add_worksheet(title='Truper', rows=5000, cols=5)
+        ws.append_row(['codigo', 'clave', 'nombre', 'precio_catalogo', 'ultima_actualizacion'])
+        return ws
+
+def guardar_catalogo_truper(productos, fecha):
+    """Guarda o actualiza el catálogo Truper en Google Sheets."""
+    try:
+        ws = get_sheet_truper()
+        registros = ws.get_all_records()
+        existentes = {str(r.get('codigo', '')): i + 2 for i, r in enumerate(registros)}
+
+        nuevos = []
+        actualizados = 0
+        for p in productos:
+            codigo = str(p.get('codigo', ''))
+            if not codigo:
+                continue
+            row = [codigo, p.get('clave', ''), p.get('nombre', ''), p.get('precio', 0), fecha]
+            if codigo in existentes:
+                fila = existentes[codigo]
+                ws.update(f'A{fila}:E{fila}', [row])
+                actualizados += 1
+            else:
+                nuevos.append(row)
+
+        if nuevos:
+            ws.append_rows(nuevos)
+
+        return {'ok': True, 'nuevos': len(nuevos), 'actualizados': actualizados, 'total': len(productos)}
+    except Exception as e:
+        return {'error': str(e)}
+
+def get_catalogo_truper():
+    """Retorna el catálogo Truper con info de stock del inventario."""
+    try:
+        ws = get_sheet_truper()
+        catalogo = ws.get_all_records()
+        inventario = get_productos()
+        # Índice de inventario por clave truper y por nombre similar
+        inv_por_clave = {str(p.get('clave_truper', '')).upper(): p for p in inventario if p.get('clave_truper')}
+
+        for item in catalogo:
+            clave = str(item.get('clave', '')).upper()
+            inv = inv_por_clave.get(clave)
+            if inv:
+                item['en_inventario'] = True
+                item['stock'] = inv.get('stock', 0)
+                item['precio_venta'] = inv.get('precio', 0)
+                item['inv_id'] = inv.get('id', '')
+            else:
+                item['en_inventario'] = False
+                item['stock'] = 0
+                item['precio_venta'] = 0
+                item['inv_id'] = ''
+
+        return catalogo
+    except Exception as e:
+        return []
+
+def agregar_desde_truper(data):
+    """Agrega un producto Truper al inventario principal."""
+    global cache_productos, cache_tiempo
+    try:
+        sheet = get_sheet_productos()
+        todos = sheet.get_all_records()
+
+        # Verificar si ya existe por clave_truper
+        for r in todos:
+            if str(r.get('clave_truper', '')).upper() == str(data.get('clave', '')).upper():
+                return {'error': 'Este producto Truper ya está en el inventario'}
+
+        nuevo_id = max([int(r.get('id', 0)) for r in todos], default=0) + 1
+        nombre = data.get('nombre') or data.get('clave', '')
+        precio = float(data.get('precio', 0))
+        stock = int(data.get('stock', 0))
+        minimo = int(data.get('minimo', 5))
+        clave_truper = data.get('clave', '')
+        imagen = data.get('imagen', '')
+
+        # Agregar columnas extra si es necesario
+        headers = sheet.row_values(1)
+        if 'clave_truper' not in headers:
+            col = len(headers) + 1
+            sheet.update_cell(1, col, 'clave_truper')
+            if 'imagen' not in headers:
+                sheet.update_cell(1, col + 1, 'imagen')
+
+        sheet.append_row([nuevo_id, nombre, precio, stock, minimo, clave_truper, imagen])
+        cache_productos = []
+        cache_tiempo = 0
+        return {'ok': True, 'id': nuevo_id}
+    except Exception as e:
+        return {'error': str(e)}
+
+# ─────────────────────────────────────────
+# IMÁGENES DE PRODUCTOS
+# ─────────────────────────────────────────
+
+def actualizar_imagen_producto(id, imagen_url):
+    """Actualiza la URL de imagen de un producto en Google Sheets."""
+    global cache_productos, cache_tiempo
+    try:
+        sheet = get_sheet_productos()
+        all_values = sheet.get_all_values()
+        headers = all_values[0] if all_values else []
+
+        # Obtener o crear columna imagen
+        if 'imagen' not in headers:
+            col_imagen = len(headers) + 1
+            if 'clave_truper' not in headers:
+                sheet.update_cell(1, len(headers) + 1, 'clave_truper')
+                col_imagen = len(headers) + 2
+            sheet.update_cell(1, col_imagen, 'imagen')
+            # Re-leer headers
+            all_values = sheet.get_all_values()
+            headers = all_values[0]
+
+        col_imagen = headers.index('imagen') + 1
+
+        for i, row in enumerate(all_values[1:], start=2):
+            if str(row[0]) == str(id):
+                sheet.update_cell(i, col_imagen, imagen_url)
+                cache_productos = []
+                cache_tiempo = 0
+                return {'ok': True}
+
+        return {'error': 'Producto no encontrado'}
+    except Exception as e:
+        return {'error': str(e)}
+
+# ─────────────────────────────────────────
 # LOGS
 # ─────────────────────────────────────────
 

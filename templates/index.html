@@ -80,6 +80,7 @@
         <a href="/proveedores">🚛 Proveedores</a>
         <a href="/reportes">📊 Reportes</a>
         <a href="/ticket">🧾 Tickets</a>
+        <a href="/truper">🟡 Truper</a>
         <a href="/usuarios" id="nav-usuarios" style="display:none">👥 Usuarios</a>
         <a href="/logs" id="nav-logs" style="display:none">📋 Logs</a>
         <a href="/logout" style="background:#2a2a4a;color:#ff6b6b;">⏏ Salir</a>
@@ -187,7 +188,11 @@
             const sinStock = p.stock <= 0;
             const card = document.createElement('div');
             card.className = `producto-card${sinStock ? ' sin-stock' : ''}`;
+            const imgHtml = p.imagen
+                ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:100%;height:80px;object-fit:contain;border-radius:6px;margin-bottom:8px;background:#1a1a2e;" onerror="this.style.display='none'">`
+                : '';
             card.innerHTML = `
+                ${imgHtml}
                 <h3>${p.nombre}</h3>
                 <div class="precio">$${p.precio}</div>
                 <div class="stock ${stockClass}">
