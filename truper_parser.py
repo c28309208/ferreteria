@@ -52,16 +52,30 @@ def _parse_text_block(text):
             precios = []
             nombre = ''
 
-            # Buscar hacia atrás el nombre (primera línea de texto plano antes del bloque)
-            for back in range(i - 1, max(i - 10, -1), -1):
+            # Buscar hacia atrás el nombre del producto
+            # El nombre suele ser la primera línea descriptiva antes del bloque Código/Clave
+            for back in range(i - 1, max(i - 15, -1), -1):
                 candidate = lines[back].strip()
-                if (candidate
-                        and not candidate.startswith('-')
-                        and not re.search(r'\$|\d{5}', candidate)
-                        and not re.match(r'(Clave|Código|Público|Mayoreo|Caja|Máster|Min)', candidate, re.IGNORECASE)
-                        and len(candidate) > 3):
-                    nombre = candidate
-                    break
+                # Ignorar líneas vacías, bullets, precios, datos técnicos y referencias a imágenes
+                if not candidate:
+                    continue
+                if candidate.startswith('-'):
+                    continue
+                if re.search(r'\$|\d{5,7}', candidate):
+                    continue
+                if re.match(r'(Clave|Código|Público|Mayoreo|Caja|Máster|Min|Contenido|Mezcla|Velocidad|Temp|Usos|Voltaje|Incluye|■|●)', candidate, re.IGNORECASE):
+                    continue
+                # Descartar líneas muy cortas o que parecen leyendas de imagen
+                if len(candidate) < 5:
+                    continue
+                # Descartar si contiene solo caracteres no-léxicos o íconos
+                if re.match(r'^[\W\d]+$', candidate):
+                    continue
+                # Descartar frases como "Ver en página X"
+                if re.search(r'Ver en página|página \d', candidate, re.IGNORECASE):
+                    continue
+                nombre = candidate
+                break
 
             # Buscar hacia adelante Clave y Público
             for j in range(i + 1, min(i + 20, len(lines))):
