@@ -110,24 +110,42 @@ def _parse_text_block(text):
 
 def parse_pdf(pdf_path, progress_callback=None):
     """
-    Procesa el PDF completo y retorna lista de productos.
+    Procesa el PDF del catálogo Truper y retorna lista de productos.
+    - Salta las primeras 19 páginas (portada, índice, introducción)
+    - Extrae: Código, Clave, Precio Público
+    - Usa la Clave como nombre si no se puede obtener uno limpio
     progress_callback(porcentaje) se llama con 0-100 si se proporciona.
     """
     total = _get_total_pages(pdf_path)
     if not total:
         return []
 
+    # Las páginas 1-19 son portada/índice, los productos empiezan en la 20
+    pagina_inicio = 20
     all_products = {}
     chunk = 20
-    chunks_total = (total + chunk - 1) // chunk
+    pages_to_process = total - pagina_inicio + 1
+    chunks_total = max(1, (pages_to_process + chunk - 1) // chunk)
 
-    for idx, start in enumerate(range(1, total + 1, chunk)):
+    for idx, start in enumerate(range(pagina_inicio, total + 1, chunk)):
         end = min(start + chunk - 1, total)
         text = _pdftotext_chunk(pdf_path, start, end)
         for p in _parse_text_block(text):
             codigo = p['codigo']
-            # Si ya tenemos el código, conservamos el que tiene nombre
-            if codigo not in all_products or (not all_products[codigo]['nombre'] and p['nombre']):
+            clave  = p['clave']
+
+            # Si no hay nombre útil, usar la Clave como nombre provisional
+            nombre = p['nombre'].strip()
+            # Descartar nombres que claramente son texto de layout (muy largos o con símbolos raros)
+            if not nombre or len(nombre) > 80 or '■' in nombre or '●' in nombre:
+                nombre = clave  # la clave ES el identificador único de Truper
+
+            p['nombre'] = nombre
+
+            # Guardar (preferir el que tenga mejor nombre)
+            if codigo not in all_products:
+                all_products[codigo] = p
+            elif nombre != clave and all_products[codigo]['nombre'] == clave:
                 all_products[codigo] = p
 
         if progress_callback:
