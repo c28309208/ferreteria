@@ -439,8 +439,77 @@ def get_catalogo_truper():
     except Exception as e:
         return []
 
+def _asegurar_columnas_truper(sheet):
+    """Asegura que la hoja de productos tenga columnas clave_truper e imagen."""
+    headers = sheet.row_values(1)
+    changed = False
+    if 'clave_truper' not in headers:
+        sheet.update_cell(1, len(headers) + 1, 'clave_truper')
+        headers.append('clave_truper')
+        changed = True
+    if 'imagen' not in headers:
+        sheet.update_cell(1, len(headers) + 1, 'imagen')
+        headers.append('imagen')
+        changed = True
+    return headers
+
+def sincronizar_inventario_desde_truper(productos):
+    """
+    Sincronización automática completa:
+    - Productos que ya existen en inventario por clave_truper → actualiza precio
+    - Productos nuevos → los agrega al inventario con precio del catálogo
+    Retorna dict con conteos.
+    """
+    global cache_productos, cache_tiempo
+    try:
+        sheet = get_sheet_productos()
+        todos = sheet.get_all_records()
+        headers = _asegurar_columnas_truper(sheet)
+
+        col_precio = headers.index('precio') + 1 if 'precio' in headers else 3
+        col_clave_truper = headers.index('clave_truper') + 1 if 'clave_truper' in headers else len(headers)
+
+        # Índice de inventario por clave_truper → fila
+        inv_por_clave = {}
+        for i, r in enumerate(todos):
+            ct = str(r.get('clave_truper', '')).upper().strip()
+            if ct:
+                inv_por_clave[ct] = {'fila': i + 2, 'record': r}
+
+        actualizados = 0
+        nuevos_rows = []
+        max_id = max([int(r.get('id', 0)) for r in todos], default=0)
+
+        for p in productos:
+            clave = str(p.get('clave', '')).upper().strip()
+            precio = float(p.get('precio', 0))
+            if not clave or not precio:
+                continue
+
+            if clave in inv_por_clave:
+                # Actualizar precio en inventario existente
+                fila = inv_por_clave[clave]['fila']
+                sheet.update_cell(fila, col_precio, precio)
+                actualizados += 1
+            else:
+                # Producto nuevo → preparar para inserción masiva
+                max_id += 1
+                nombre = p.get('nombre', '') or clave
+                nuevos_rows.append([max_id, nombre, precio, 0, 5, p.get('clave', ''), ''])
+                inv_por_clave[clave] = {'fila': None, 'record': {}}  # evitar duplicados
+
+        # Insertar todos los nuevos de una sola vez (más eficiente)
+        if nuevos_rows:
+            sheet.append_rows(nuevos_rows)
+
+        cache_productos = []
+        cache_tiempo = 0
+        return {'ok': True, 'actualizados': actualizados, 'nuevos': len(nuevos_rows), 'total': len(productos)}
+    except Exception as e:
+        return {'error': str(e)}
+
 def agregar_desde_truper(data):
-    """Agrega un producto Truper al inventario principal."""
+    """Agrega manualmente un producto Truper individual al inventario."""
     global cache_productos, cache_tiempo
     try:
         sheet = get_sheet_productos()
@@ -451,6 +520,7 @@ def agregar_desde_truper(data):
             if str(r.get('clave_truper', '')).upper() == str(data.get('clave', '')).upper():
                 return {'error': 'Este producto Truper ya está en el inventario'}
 
+        _asegurar_columnas_truper(sheet)
         nuevo_id = max([int(r.get('id', 0)) for r in todos], default=0) + 1
         nombre = data.get('nombre') or data.get('clave', '')
         precio = float(data.get('precio', 0))
@@ -458,14 +528,6 @@ def agregar_desde_truper(data):
         minimo = int(data.get('minimo', 5))
         clave_truper = data.get('clave', '')
         imagen = data.get('imagen', '')
-
-        # Agregar columnas extra si es necesario
-        headers = sheet.row_values(1)
-        if 'clave_truper' not in headers:
-            col = len(headers) + 1
-            sheet.update_cell(1, col, 'clave_truper')
-            if 'imagen' not in headers:
-                sheet.update_cell(1, col + 1, 'imagen')
 
         sheet.append_row([nuevo_id, nombre, precio, stock, minimo, clave_truper, imagen])
         cache_productos = []

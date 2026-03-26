@@ -372,7 +372,7 @@
                     clearInterval(intervalo);
                     const r = job.resultado;
                     resetUpload();
-                    alert(`✅ ¡Catálogo sincronizado!\n\n• Total: ${r.total} productos\n• Nuevos: ${r.nuevos}\n• Actualizados: ${r.actualizados}`);
+                    alert(`✅ ¡Sincronización completada!\n\n📦 Productos nuevos agregados al inventario: ${r.nuevos}\n🔄 Precios actualizados en inventario: ${r.actualizados}\n📋 Total procesados del catálogo: ${r.total}`);
                     cargarCatalogo();
                 } else if (job.estado === 'error') {
                     clearInterval(intervalo);

@@ -274,11 +274,17 @@ def api_truper_subir():
         try:
             productos = parse_pdf(tmp.name, progress_callback=actualizar_progreso)
             fecha = datetime.now(database.ZoneInfo('America/Mexico_City')).strftime('%d/%m/%Y %H:%M')
-            resultado = database.guardar_catalogo_truper(productos, fecha)
+
+            # 1. Guardar en pestaña Truper (catálogo de referencia)
+            database.guardar_catalogo_truper(productos, fecha)
+
+            # 2. Sincronización automática con inventario principal
+            resultado = database.sincronizar_inventario_desde_truper(productos)
+
             truper_jobs[job_id]['estado'] = 'listo'
             truper_jobs[job_id]['resultado'] = resultado
             database.registrar_log(session.get('usuario', 'sistema'), 'TRUPER SYNC',
-                                   f"PDF procesado: {resultado.get('total', 0)} productos")
+                                   f"Sincronizado: {resultado.get('nuevos', 0)} nuevos, {resultado.get('actualizados', 0)} precios actualizados")
         except Exception as e:
             truper_jobs[job_id]['estado'] = 'error'
             truper_jobs[job_id]['resultado'] = {'error': str(e)}
