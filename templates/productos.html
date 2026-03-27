@@ -51,21 +51,19 @@
         .btn-del { background: #3a1a2a; color: #ff6b6b; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .btn-del:hover { background: #5a1a2a; }
 
-        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); justify-content: center; align-items: center; z-index: 100; }
         .modal.activo { display: flex; }
         .modal-box { background: #16213e; border-radius: 15px; padding: 30px; width: 420px; border: 2px solid #e94560; max-height: 90vh; overflow-y: auto; }
         .modal-box h2 { color: #e94560; margin-bottom: 22px; font-size: 20px; }
         .campo { margin-bottom: 16px; }
         .campo label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
-        .campo input, .campo select { width: 100%; padding: 11px 14px; border-radius: 8px; border: 2px solid #2a2a4a; background: #1a1a2e; color: white; font-size: 15px; }
-        .campo input:focus, .campo select:focus { outline: none; border-color: #e94560; }
+        .campo input { width: 100%; padding: 11px 14px; border-radius: 8px; border: 2px solid #2a2a4a; background: #1a1a2e; color: white; font-size: 15px; }
+        .campo input:focus { outline: none; border-color: #e94560; }
         .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
         .modal-btns .btn { flex: 1; padding: 13px; font-size: 15px; }
 
         .sin-datos { text-align: center; padding: 50px; color: #555; font-size: 16px; }
 
-        /* Confirm modal */
         .confirm-box { background: #16213e; border-radius: 15px; padding: 30px; width: 360px; border: 2px solid #ff6b6b; text-align: center; }
         .confirm-box h3 { color: #ff6b6b; margin-bottom: 12px; }
         .confirm-box p { color: #aaa; margin-bottom: 24px; font-size: 14px; }
@@ -73,12 +71,8 @@
         .btn-danger { background: #e94560; color: white; flex: 1; }
         .btn-danger:hover { background: #c73652; }
 
-        /* Botones de imagen */
-        .img-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
-        .btn-img-label {
-            padding: 8px 12px; border-radius: 8px; cursor: pointer;
-            font-size: 13px; white-space: nowrap; border: none; font-weight: bold;
-        }
+        .img-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .btn-img-label { padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; white-space: nowrap; }
         .btn-img-galeria { background: #2a3a6a; color: #7ab3ff; }
         .btn-img-camara  { background: #1a4a2a; color: #4ecca3; }
     </style>
@@ -106,7 +100,7 @@
 
 <div class="container">
 
-    <div class="stats" id="stats">
+    <div class="stats">
         <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-label">Total productos</div></div>
         <div class="stat-card verde"><div class="stat-num" id="s-ok">—</div><div class="stat-label">Stock normal</div></div>
         <div class="stat-card amarillo"><div class="stat-num" id="s-bajo">—</div><div class="stat-label">Stock bajo</div></div>
@@ -117,17 +111,11 @@
         <button class="btn btn-primary" onclick="abrirModal()">＋ Nuevo producto</button>
     </div>
 
-    <table id="tabla">
+    <table>
         <thead>
             <tr>
-                <th>Img</th>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                <th>Mínimo</th>
-                <th>Estado</th>
-                <th>Acciones</th>
+                <th>Img</th><th>ID</th><th>Nombre</th><th>Precio</th>
+                <th>Stock</th><th>Mínimo</th><th>Estado</th><th>Acciones</th>
             </tr>
         </thead>
         <tbody id="tbody">
@@ -149,27 +137,20 @@
 
         <div class="campo">
             <label>🖼️ Imagen (opcional)</label>
-            <input type="text" id="f-imagen" placeholder="https://... o usa los botones de abajo" oninput="mostrarPreviewImagen(this.value)">
-
+            <input type="text" id="f-imagen" placeholder="https://... o usa los botones" oninput="mostrarPreview(this.value)">
             <div class="img-btns">
-                <!-- Galería -->
                 <label class="btn-img-label btn-img-galeria">
                     📁 Galería
-                    <input type="file" id="f-imagen-file" accept="image/*" style="display:none;" onchange="manejarArchivoImagen(this)">
+                    <input type="file" accept="image/*" style="display:none" onchange="manejarArchivo(this)">
                 </label>
-                <!-- Cámara trasera del celular -->
                 <label class="btn-img-label btn-img-camara">
                     📷 Cámara
-                    <input type="file" id="f-imagen-camara" accept="image/*" capture="environment" style="display:none;" onchange="manejarArchivoImagen(this)">
+                    <input type="file" accept="image/*" capture="environment" style="display:none" onchange="manejarArchivo(this)">
                 </label>
             </div>
-
-            <!-- Estado de subida -->
             <div id="upload-status" style="font-size:12px;margin-top:6px;display:none;"></div>
-
-            <!-- Vista previa -->
-            <div id="preview-imagen" style="margin-top:8px;display:none;">
-                <img id="img-preview" src="" alt="Vista previa"
+            <div id="preview-wrap" style="margin-top:8px;display:none;">
+                <img id="img-preview" src="" alt="Preview"
                      style="max-width:100%;max-height:120px;border-radius:8px;object-fit:contain;background:#1a1a2e;padding:4px;">
             </div>
         </div>
@@ -185,7 +166,7 @@
 <div class="modal" id="modal-confirm">
     <div class="confirm-box">
         <h3>⚠️ Eliminar producto</h3>
-        <p id="confirm-texto">¿Estás seguro? Esta acción no se puede deshacer.</p>
+        <p id="confirm-texto"></p>
         <div class="confirm-btns">
             <button class="btn btn-secondary" onclick="document.getElementById('modal-confirm').classList.remove('activo')">Cancelar</button>
             <button class="btn btn-danger" id="confirm-ok">Eliminar</button>
@@ -194,270 +175,255 @@
 </div>
 
 <script>
-    let productos = [];
-    let filtrados = [];
+let productos = [];
+let filtrados = [];
+let archivoPendiente = null;
 
-    // Archivo pendiente para productos nuevos (se sube después de crear)
-    let archivoPendiente = null;
-
-    async function cargar() {
-        try {
-            const res = await fetch('/buscar?q=');
-            productos = await res.json();
-            filtrados = [...productos];
-            renderizar();
-            actualizarStats();
-        } catch(e) {
-            document.getElementById('tbody').innerHTML = '<tr><td colspan="8" class="sin-datos">Error cargando datos ❌</td></tr>';
-        }
-    }
-
-    function actualizarStats() {
-        const bajo = productos.filter(p => p.stock <= p.minimo).length;
-        document.getElementById('s-total').textContent = productos.length;
-        document.getElementById('s-ok').textContent = productos.length - bajo;
-        document.getElementById('s-bajo').textContent = bajo;
-    }
-
-    function filtrar() {
-        const q = document.getElementById('buscar').value.toLowerCase();
-        filtrados = productos.filter(p => p.nombre.toLowerCase().includes(q));
+// ── CARGAR ────────────────────────────────────────────────────────────────────
+async function cargar() {
+    try {
+        const res = await fetch('/buscar?q=');
+        productos = await res.json();
+        filtrados = [...productos];
         renderizar();
+        actualizarStats();
+    } catch(e) {
+        document.getElementById('tbody').innerHTML =
+            '<tr><td colspan="8" class="sin-datos">Error cargando datos ❌</td></tr>';
+    }
+}
+
+function actualizarStats() {
+    const bajo = productos.filter(p => p.stock <= p.minimo).length;
+    document.getElementById('s-total').textContent = productos.length;
+    document.getElementById('s-ok').textContent    = productos.length - bajo;
+    document.getElementById('s-bajo').textContent  = bajo;
+}
+
+function filtrar() {
+    const q = document.getElementById('buscar').value.toLowerCase();
+    filtrados = productos.filter(p => p.nombre.toLowerCase().includes(q));
+    renderizar();
+}
+
+function renderizar() {
+    const tbody = document.getElementById('tbody');
+    if (!filtrados.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="sin-datos">No se encontraron productos 📦</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filtrados.map(p => {
+        const img = p.imagen
+            ? `<img src="${p.imagen}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#1a1a2e;cursor:pointer;" onclick="window.open('${p.imagen}','_blank')" onerror="this.style.display='none'">`
+            : `<span style="color:#444;font-size:18px;">📷</span>`;
+        return `<tr>
+            <td style="text-align:center">${img}</td>
+            <td style="color:#555">#${p.id}</td>
+            <td><strong>${p.nombre}</strong></td>
+            <td class="precio">$${parseFloat(p.precio).toFixed(2)}</td>
+            <td>${p.stock}</td>
+            <td>${p.minimo}</td>
+            <td><span class="badge ${p.stock <= p.minimo ? 'badge-bajo':'badge-ok'}">${p.stock <= p.minimo ? '⚠️ Bajo':'✅ OK'}</span></td>
+            <td><div class="acciones">
+                <button class="btn-edit" onclick="editar(${p.id})">✏️ Editar</button>
+                <button class="btn-del"  onclick="confirmarEliminar(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">🗑️</button>
+            </div></td>
+        </tr>`;
+    }).join('');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function abrirModal(p = null) {
+    archivoPendiente = null;
+    document.getElementById('modal-titulo').textContent = p ? '✏️ Editar Producto' : '➕ Nuevo Producto';
+    document.getElementById('edit-id').value  = p ? p.id     : '';
+    document.getElementById('f-nombre').value = p ? p.nombre : '';
+    document.getElementById('f-precio').value = p ? p.precio : '';
+    document.getElementById('f-stock').value  = p ? p.stock  : '';
+    document.getElementById('f-minimo').value = p ? p.minimo : '';
+    const url = p ? (p.imagen || '') : '';
+    document.getElementById('f-imagen').value = url;
+    mostrarPreview(url);
+    setStatus('', '', false);
+    document.getElementById('modal').classList.add('activo');
+}
+
+function cerrarModal() {
+    archivoPendiente = null;
+    document.getElementById('modal').classList.remove('activo');
+}
+
+function editar(id) {
+    const p = productos.find(x => x.id == id);
+    if (p) abrirModal(p);
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function mostrarPreview(url) {
+    const wrap = document.getElementById('preview-wrap');
+    const img  = document.getElementById('img-preview');
+    if (url && url.startsWith('http')) { img.src = url; wrap.style.display = 'block'; }
+    else wrap.style.display = 'none';
+}
+
+function setStatus(msg, color, visible = true) {
+    const s = document.getElementById('upload-status');
+    s.textContent   = msg;
+    s.style.color   = color;
+    s.style.display = visible ? 'block' : 'none';
+}
+
+// ── COMPRIMIR IMAGEN ──────────────────────────────────────────────────────────
+// Convierte fotos de 10-15MB a ~200-400KB antes de enviarlas al servidor
+function comprimirImagen(file, maxAncho = 1200, calidad = 0.82) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > maxAncho) { h = Math.round(h * maxAncho / w); w = maxAncho; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(blob => resolve(blob), 'image/jpeg', calidad);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ── MANEJAR ARCHIVO ───────────────────────────────────────────────────────────
+async function manejarArchivo(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    setStatus('⏳ Comprimiendo imagen...', '#888');
+    const comprimido = await comprimirImagen(file);  // siempre comprimir primero
+    const id = document.getElementById('edit-id').value;
+
+    if (id) {
+        // Producto existente → subir de inmediato
+        await subirAlServidor(comprimido, id);
+    } else {
+        // Producto nuevo → guardar en memoria hasta tener el ID
+        archivoPendiente = comprimido;
+        setStatus('📎 Foto lista — se subirá al guardar el producto', '#f7c948');
+        // Preview local
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('img-preview').src = e.target.result;
+            document.getElementById('preview-wrap').style.display = 'block';
+        };
+        reader.readAsDataURL(comprimido);
     }
 
-    function renderizar() {
-        const tbody = document.getElementById('tbody');
-        if (filtrados.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="sin-datos">No se encontraron productos 📦</td></tr>';
-            return;
-        }
-        tbody.innerHTML = filtrados.map(p => {
-            const img = p.imagen
-                ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#1a1a2e;cursor:pointer;" onclick="verImagen('${p.imagen}')" onerror="this.style.display='none'">`
-                : `<span style="color:#444;font-size:18px;">📷</span>`;
-            return `
-            <tr>
-                <td style="text-align:center;">${img}</td>
-                <td style="color:#555">#${p.id}</td>
-                <td><strong>${p.nombre}</strong></td>
-                <td class="precio">$${parseFloat(p.precio).toFixed(2)}</td>
-                <td>${p.stock}</td>
-                <td>${p.minimo}</td>
-                <td><span class="badge ${p.stock <= p.minimo ? 'badge-bajo' : 'badge-ok'}">${p.stock <= p.minimo ? '⚠️ Bajo' : '✅ OK'}</span></td>
-                <td>
-                    <div class="acciones">
-                        <button class="btn-edit" onclick="editar(${p.id})">✏️ Editar</button>
-                        <button class="btn-del" onclick="confirmarEliminar(${p.id}, '${p.nombre.replace(/'/g,"\\'")}')">🗑️</button>
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
+    input.value = ''; // resetear para poder seleccionar la misma foto de nuevo
+}
+
+// ── SUBIR AL SERVIDOR ─────────────────────────────────────────────────────────
+async function subirAlServidor(blob, productoId) {
+    setStatus('⏳ Subiendo imagen a ImgBB...', '#888');
+    const form = new FormData();
+    form.append('imagen', blob, 'foto.jpg');
+    try {
+        const res = await fetch(`/api/productos/${productoId}/imagen/subir`, { method: 'POST', body: form });
+        const r   = await res.json();
+        if (r.error) { setStatus('❌ ' + r.error, '#ff6b6b'); return false; }
+        document.getElementById('f-imagen').value = r.url;
+        mostrarPreview(r.url);
+        setStatus('✅ Imagen subida correctamente', '#4ecca3');
+        setTimeout(() => setStatus('', '', false), 3000);
+        return true;
+    } catch(e) {
+        setStatus('❌ Error de conexión', '#ff6b6b');
+        return false;
     }
+}
 
-    function verImagen(url) {
-        window.open(url, '_blank');
-    }
+// ── GUARDAR ───────────────────────────────────────────────────────────────────
+async function guardar() {
+    const id     = document.getElementById('edit-id').value;
+    const nombre = document.getElementById('f-nombre').value.trim();
+    const precio = parseFloat(document.getElementById('f-precio').value);
+    const stock  = parseInt(document.getElementById('f-stock').value)  || 0;
+    const minimo = parseInt(document.getElementById('f-minimo').value) || 5;
+    const imagen = document.getElementById('f-imagen').value.trim();
 
-    function abrirModal(p = null) {
-        archivoPendiente = null; // limpiar archivo pendiente
-        document.getElementById('modal-titulo').textContent = p ? '✏️ Editar Producto' : '➕ Nuevo Producto';
-        document.getElementById('edit-id').value = p ? p.id : '';
-        document.getElementById('f-nombre').value = p ? p.nombre : '';
-        document.getElementById('f-precio').value = p ? p.precio : '';
-        document.getElementById('f-stock').value = p ? p.stock : '';
-        document.getElementById('f-minimo').value = p ? p.minimo : '';
-        const imgUrl = p ? (p.imagen || '') : '';
-        document.getElementById('f-imagen').value = imgUrl;
-        mostrarPreviewImagen(imgUrl);
-        ocultarStatus();
-        document.getElementById('modal').classList.add('activo');
-    }
+    if (!nombre || isNaN(precio)) { alert('⚠️ Completa nombre y precio'); return; }
 
-    function cerrarModal() {
-        archivoPendiente = null;
-        document.getElementById('f-imagen-file').value = '';
-        document.getElementById('f-imagen-camara').value = '';
-        document.getElementById('modal').classList.remove('activo');
-    }
+    const btn = document.getElementById('btn-guardar');
+    btn.disabled = true; btn.textContent = '⏳ Guardando...';
 
-    function mostrarPreviewImagen(url) {
-        const preview = document.getElementById('preview-imagen');
-        const img = document.getElementById('img-preview');
-        if (url && url.startsWith('http')) {
-            img.src = url;
-            preview.style.display = 'block';
-        } else {
-            preview.style.display = 'none';
-        }
-    }
-
-    function ocultarStatus() {
-        const s = document.getElementById('upload-status');
-        s.style.display = 'none';
-        s.textContent = '';
-    }
-
-    function mostrarStatus(msg, color) {
-        const s = document.getElementById('upload-status');
-        s.textContent = msg;
-        s.style.color = color;
-        s.style.display = 'block';
-    }
-
-    // ─── MANEJO DE ARCHIVO (galería o cámara) ───────────────────────────────
-    function manejarArchivoImagen(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        const id = document.getElementById('edit-id').value;
+    try {
+        let nuevoId = id;
 
         if (id) {
-            // Producto existente → subir de inmediato
-            subirImagenAServidor(file, id);
-        } else {
-            // Producto nuevo → guardar archivo para subir después del guardado
-            archivoPendiente = file;
-            mostrarStatus('📎 Foto lista — se subirá al guardar el producto', '#f7c948');
-
-            // Mostrar preview local
-            const reader = new FileReader();
-            reader.onload = e => {
-                document.getElementById('img-preview').src = e.target.result;
-                document.getElementById('preview-imagen').style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-
-        input.value = ''; // resetear input para permitir seleccionar la misma foto de nuevo
-    }
-
-    // ─── SUBIR IMAGEN AL SERVIDOR ────────────────────────────────────────────
-    async function subirImagenAServidor(file, productoId) {
-        mostrarStatus('⏳ Subiendo imagen...', '#888');
-
-        const form = new FormData();
-        form.append('imagen', file);
-
-        try {
-            const res = await fetch(`/api/productos/${productoId}/imagen/subir`, {
-                method: 'POST',
-                body: form
+            const res = await fetch(`/api/productos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, precio, stock, minimo, imagen })
             });
             const r = await res.json();
-
-            if (r.error) {
-                mostrarStatus('❌ ' + r.error, '#ff6b6b');
-                return false;
-            }
-
-            document.getElementById('f-imagen').value = r.url;
-            mostrarPreviewImagen(r.url);
-            mostrarStatus('✅ Imagen subida correctamente', '#4ecca3');
-            setTimeout(ocultarStatus, 3000);
-            return true;
-        } catch(e) {
-            mostrarStatus('❌ Error de conexión al subir imagen', '#ff6b6b');
-            return false;
-        }
-    }
-
-    function editar(id) {
-        const p = productos.find(x => x.id == id);
-        if (p) abrirModal(p);
-    }
-
-    // ─── GUARDAR PRODUCTO ────────────────────────────────────────────────────
-    async function guardar() {
-        const id = document.getElementById('edit-id').value;
-        const nombre = document.getElementById('f-nombre').value.trim();
-        const precio = parseFloat(document.getElementById('f-precio').value);
-        const stock  = parseInt(document.getElementById('f-stock').value) || 0;
-        const minimo = parseInt(document.getElementById('f-minimo').value) || 5;
-        const imagen = document.getElementById('f-imagen').value.trim();
-
-        if (!nombre || isNaN(precio)) {
-            alert('⚠️ Completa nombre y precio');
-            return;
-        }
-
-        const btn = document.getElementById('btn-guardar');
-        btn.disabled = true;
-        btn.textContent = '⏳ Guardando...';
-
-        try {
-            let nuevoId = id;
-
-            if (id) {
-                // ── EDITAR producto existente ──
-                const res = await fetch(`/api/productos/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, precio, stock, minimo, imagen })
-                });
-                const r = await res.json();
-                if (r.error) { alert('❌ ' + r.error); return; }
-
-            } else {
-                // ── CREAR producto nuevo ──
-                const res = await fetch('/api/productos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, precio, stock, minimo, imagen })
-                });
-                const r = await res.json();
-                if (r.error) { alert('❌ ' + r.error); return; }
-                nuevoId = r.id; // ID asignado por el servidor
-            }
-
-            // ── Si hay foto pendiente, subirla ahora que ya tenemos el ID ──
-            if (archivoPendiente && nuevoId) {
-                btn.textContent = '⏳ Subiendo foto...';
-                await subirImagenAServidor(archivoPendiente, nuevoId);
-                archivoPendiente = null;
-            }
-
-            cerrarModal();
-            cargar();
-
-        } catch(e) {
-            alert('Error al guardar: ' + e.message);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = '💾 Guardar';
-        }
-    }
-
-    // ─── ELIMINAR ────────────────────────────────────────────────────────────
-    function confirmarEliminar(id, nombre) {
-        document.getElementById('confirm-texto').textContent = `¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`;
-        document.getElementById('modal-confirm').classList.add('activo');
-        document.getElementById('confirm-ok').onclick = () => eliminar(id);
-    }
-
-    async function eliminar(id) {
-        document.getElementById('modal-confirm').classList.remove('activo');
-        try {
-            const res = await fetch(`/api/productos/${id}`, { method: 'DELETE' });
+            if (r.error) { alert('❌ ' + r.error); return; }
+        } else {
+            const res = await fetch('/api/productos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, precio, stock, minimo, imagen })
+            });
             const r = await res.json();
             if (r.error) { alert('❌ ' + r.error); return; }
-            cargar();
-        } catch(e) {
-            alert('Error al eliminar');
+            nuevoId = r.id;
         }
-    }
 
-    cargar();
+        // Subir foto pendiente ahora que ya tenemos el ID
+        if (archivoPendiente && nuevoId) {
+            btn.textContent = '⏳ Subiendo foto...';
+            await subirAlServidor(archivoPendiente, nuevoId);
+            archivoPendiente = null;
+        }
+
+        cerrarModal();
+        cargar();
+    } catch(e) {
+        alert('Error al guardar: ' + e.message);
+    } finally {
+        btn.disabled = false; btn.textContent = '💾 Guardar';
+    }
+}
+
+// ── ELIMINAR ──────────────────────────────────────────────────────────────────
+function confirmarEliminar(id, nombre) {
+    document.getElementById('confirm-texto').textContent =
+        `¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`;
+    document.getElementById('modal-confirm').classList.add('activo');
+    document.getElementById('confirm-ok').onclick = () => eliminar(id);
+}
+
+async function eliminar(id) {
+    document.getElementById('modal-confirm').classList.remove('activo');
+    try {
+        const res = await fetch(`/api/productos/${id}`, { method: 'DELETE' });
+        const r   = await res.json();
+        if (r.error) { alert('❌ ' + r.error); return; }
+        cargar();
+    } catch(e) { alert('Error al eliminar'); }
+}
+
+cargar();
 </script>
 
 <script>
-    fetch('/api/sesion').then(r => r.json()).then(s => {
-        if (s.rol === 'admin') {
-            const u = document.getElementById('nav-usuarios');
-            const l = document.getElementById('nav-logs');
-            if (u) u.style.display = '';
-            if (l) l.style.display = '';
-        }
-    }).catch(() => {});
+fetch('/api/sesion').then(r => r.json()).then(s => {
+    if (s.rol === 'admin') {
+        const u = document.getElementById('nav-usuarios');
+        const l = document.getElementById('nav-logs');
+        if (u) u.style.display = '';
+        if (l) l.style.display = '';
+    }
+}).catch(() => {});
 </script>
 </body>
 </html>
