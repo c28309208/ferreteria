@@ -365,7 +365,9 @@ def subir_imagen(id):
     database.registrar_log(usuario_actual(), 'IMAGEN SUBIDA', f"ID {id} | {filename}")
     return jsonify({'ok': True, 'url': resultado['url']})
 
+# Keep-alive fuera del bloque __main__ para que funcione con Gunicorn
+t = threading.Thread(target=keep_alive, daemon=True)
+t.start()
+
 if __name__ == '__main__':
-    t = threading.Thread(target=keep_alive, daemon=True)
-    t.start()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
