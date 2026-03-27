@@ -54,7 +54,7 @@
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); justify-content: center; align-items: center; z-index: 100; }
         .modal.activo { display: flex; }
-        .modal-box { background: #16213e; border-radius: 15px; padding: 30px; width: 420px; border: 2px solid #e94560; }
+        .modal-box { background: #16213e; border-radius: 15px; padding: 30px; width: 420px; border: 2px solid #e94560; max-height: 90vh; overflow-y: auto; }
         .modal-box h2 { color: #e94560; margin-bottom: 22px; font-size: 20px; }
         .campo { margin-bottom: 16px; }
         .campo label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
@@ -72,6 +72,15 @@
         .confirm-btns { display: flex; gap: 10px; }
         .btn-danger { background: #e94560; color: white; flex: 1; }
         .btn-danger:hover { background: #c73652; }
+
+        /* Botones de imagen */
+        .img-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+        .btn-img-label {
+            padding: 8px 12px; border-radius: 8px; cursor: pointer;
+            font-size: 13px; white-space: nowrap; border: none; font-weight: bold;
+        }
+        .btn-img-galeria { background: #2a3a6a; color: #7ab3ff; }
+        .btn-img-camara  { background: #1a4a2a; color: #4ecca3; }
     </style>
 </head>
 <body>
@@ -132,31 +141,42 @@
     <div class="modal-box">
         <h2 id="modal-titulo">➕ Nuevo Producto</h2>
         <input type="hidden" id="edit-id">
+
         <div class="campo"><label>Nombre</label><input type="text" id="f-nombre" placeholder="Ej: Cemento 50kg"></div>
         <div class="campo"><label>Precio ($)</label><input type="number" id="f-precio" placeholder="0.00" step="0.01" min="0"></div>
         <div class="campo"><label>Stock actual</label><input type="number" id="f-stock" placeholder="0" min="0"></div>
         <div class="campo"><label>Stock mínimo</label><input type="number" id="f-minimo" placeholder="5" min="0"></div>
+
         <div class="campo">
             <label>🖼️ Imagen (opcional)</label>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="text" id="f-imagen" placeholder="https://... o sube una foto" style="flex:1;min-width:150px;">
-                <label style="background:#2a3a6a;color:#7ab3ff;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;border:none;">
-                    📁 Subir foto
-                    <input type="file" id="f-imagen-file" accept="image/*" style="display:none;" onchange="subirImagen(this)">
+            <input type="text" id="f-imagen" placeholder="https://... o usa los botones de abajo" oninput="mostrarPreviewImagen(this.value)">
+
+            <div class="img-btns">
+                <!-- Galería -->
+                <label class="btn-img-label btn-img-galeria">
+                    📁 Galería
+                    <input type="file" id="f-imagen-file" accept="image/*" style="display:none;" onchange="manejarArchivoImagen(this)">
                 </label>
-                <label style="background:#1a4a2a;color:#4ecca3;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;border:none;">
-                    📷 Tomar foto
-                    <input type="file" id="f-imagen-camara" accept="image/*" capture="environment" style="display:none;" onchange="subirImagen(this)">
+                <!-- Cámara trasera del celular -->
+                <label class="btn-img-label btn-img-camara">
+                    📷 Cámara
+                    <input type="file" id="f-imagen-camara" accept="image/*" capture="environment" style="display:none;" onchange="manejarArchivoImagen(this)">
                 </label>
             </div>
-            <div id="upload-status" style="font-size:12px;color:#4ecca3;margin-top:4px;display:none;"></div>
-            <div id="preview-imagen" style="margin-top:8px; display:none;">
-                <img id="img-preview" src="" alt="Vista previa" style="max-width:100%; max-height:120px; border-radius:8px; object-fit:contain; background:#1a1a2e; padding:4px;">
+
+            <!-- Estado de subida -->
+            <div id="upload-status" style="font-size:12px;margin-top:6px;display:none;"></div>
+
+            <!-- Vista previa -->
+            <div id="preview-imagen" style="margin-top:8px;display:none;">
+                <img id="img-preview" src="" alt="Vista previa"
+                     style="max-width:100%;max-height:120px;border-radius:8px;object-fit:contain;background:#1a1a2e;padding:4px;">
             </div>
         </div>
+
         <div class="modal-btns">
             <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
-            <button class="btn btn-primary" onclick="guardar()">💾 Guardar</button>
+            <button class="btn btn-primary" id="btn-guardar" onclick="guardar()">💾 Guardar</button>
         </div>
     </div>
 </div>
@@ -177,6 +197,9 @@
     let productos = [];
     let filtrados = [];
 
+    // Archivo pendiente para productos nuevos (se sube después de crear)
+    let archivoPendiente = null;
+
     async function cargar() {
         try {
             const res = await fetch('/buscar?q=');
@@ -185,7 +208,7 @@
             renderizar();
             actualizarStats();
         } catch(e) {
-            document.getElementById('tbody').innerHTML = '<tr><td colspan="7" class="sin-datos">Error cargando datos ❌</td></tr>';
+            document.getElementById('tbody').innerHTML = '<tr><td colspan="8" class="sin-datos">Error cargando datos ❌</td></tr>';
         }
     }
 
@@ -236,6 +259,7 @@
     }
 
     function abrirModal(p = null) {
+        archivoPendiente = null; // limpiar archivo pendiente
         document.getElementById('modal-titulo').textContent = p ? '✏️ Editar Producto' : '➕ Nuevo Producto';
         document.getElementById('edit-id').value = p ? p.id : '';
         document.getElementById('f-nombre').value = p ? p.nombre : '';
@@ -245,7 +269,15 @@
         const imgUrl = p ? (p.imagen || '') : '';
         document.getElementById('f-imagen').value = imgUrl;
         mostrarPreviewImagen(imgUrl);
+        ocultarStatus();
         document.getElementById('modal').classList.add('activo');
+    }
+
+    function cerrarModal() {
+        archivoPendiente = null;
+        document.getElementById('f-imagen-file').value = '';
+        document.getElementById('f-imagen-camara').value = '';
+        document.getElementById('modal').classList.remove('activo');
     }
 
     function mostrarPreviewImagen(url) {
@@ -259,48 +291,74 @@
         }
     }
 
-    document.getElementById('f-imagen').addEventListener('input', function() {
-        mostrarPreviewImagen(this.value);
-    });
+    function ocultarStatus() {
+        const s = document.getElementById('upload-status');
+        s.style.display = 'none';
+        s.textContent = '';
+    }
 
-    async function subirImagen(input) {
+    function mostrarStatus(msg, color) {
+        const s = document.getElementById('upload-status');
+        s.textContent = msg;
+        s.style.color = color;
+        s.style.display = 'block';
+    }
+
+    // ─── MANEJO DE ARCHIVO (galería o cámara) ───────────────────────────────
+    function manejarArchivoImagen(input) {
         const file = input.files[0];
         if (!file) return;
+
         const id = document.getElementById('edit-id').value;
-        if (!id) {
-            alert('⚠️ Guarda el producto primero antes de subir una imagen.');
-            input.value = '';
-            return;
+
+        if (id) {
+            // Producto existente → subir de inmediato
+            subirImagenAServidor(file, id);
+        } else {
+            // Producto nuevo → guardar archivo para subir después del guardado
+            archivoPendiente = file;
+            mostrarStatus('📎 Foto lista — se subirá al guardar el producto', '#f7c948');
+
+            // Mostrar preview local
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('img-preview').src = e.target.result;
+                document.getElementById('preview-imagen').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
         }
-        const status = document.getElementById('upload-status');
-        status.textContent = '⏳ Subiendo imagen...';
-        status.style.display = 'block';
-        status.style.color = '#888';
+
+        input.value = ''; // resetear input para permitir seleccionar la misma foto de nuevo
+    }
+
+    // ─── SUBIR IMAGEN AL SERVIDOR ────────────────────────────────────────────
+    async function subirImagenAServidor(file, productoId) {
+        mostrarStatus('⏳ Subiendo imagen...', '#888');
 
         const form = new FormData();
         form.append('imagen', file);
+
         try {
-            const res = await fetch(`/api/productos/${id}/imagen/subir`, { method: 'POST', body: form });
+            const res = await fetch(`/api/productos/${productoId}/imagen/subir`, {
+                method: 'POST',
+                body: form
+            });
             const r = await res.json();
+
             if (r.error) {
-                status.textContent = '❌ ' + r.error;
-                status.style.color = '#ff6b6b';
-                return;
+                mostrarStatus('❌ ' + r.error, '#ff6b6b');
+                return false;
             }
+
             document.getElementById('f-imagen').value = r.url;
             mostrarPreviewImagen(r.url);
-            status.textContent = '✅ Imagen subida correctamente';
-            status.style.color = '#4ecca3';
-            setTimeout(() => { status.style.display = 'none'; }, 3000);
+            mostrarStatus('✅ Imagen subida correctamente', '#4ecca3');
+            setTimeout(ocultarStatus, 3000);
+            return true;
         } catch(e) {
-            status.textContent = '❌ Error al subir la imagen';
-            status.style.color = '#ff6b6b';
+            mostrarStatus('❌ Error de conexión al subir imagen', '#ff6b6b');
+            return false;
         }
-        input.value = '';
-    }
-
-    function cerrarModal() {
-        document.getElementById('modal').classList.remove('activo');
     }
 
     function editar(id) {
@@ -308,45 +366,68 @@
         if (p) abrirModal(p);
     }
 
+    // ─── GUARDAR PRODUCTO ────────────────────────────────────────────────────
     async function guardar() {
         const id = document.getElementById('edit-id').value;
-        const data = {
-            nombre: document.getElementById('f-nombre').value.trim(),
-            precio: parseFloat(document.getElementById('f-precio').value),
-            stock: parseInt(document.getElementById('f-stock').value),
-            minimo: parseInt(document.getElementById('f-minimo').value),
-            imagen: document.getElementById('f-imagen').value.trim()
-        };
+        const nombre = document.getElementById('f-nombre').value.trim();
+        const precio = parseFloat(document.getElementById('f-precio').value);
+        const stock  = parseInt(document.getElementById('f-stock').value) || 0;
+        const minimo = parseInt(document.getElementById('f-minimo').value) || 5;
+        const imagen = document.getElementById('f-imagen').value.trim();
 
-        if (!data.nombre || isNaN(data.precio)) {
+        if (!nombre || isNaN(precio)) {
             alert('⚠️ Completa nombre y precio');
             return;
         }
 
+        const btn = document.getElementById('btn-guardar');
+        btn.disabled = true;
+        btn.textContent = '⏳ Guardando...';
+
         try {
-            let res;
+            let nuevoId = id;
+
             if (id) {
-                res = await fetch(`/api/productos/${id}`, {
+                // ── EDITAR producto existente ──
+                const res = await fetch(`/api/productos/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ nombre, precio, stock, minimo, imagen })
                 });
+                const r = await res.json();
+                if (r.error) { alert('❌ ' + r.error); return; }
+
             } else {
-                res = await fetch('/api/productos', {
+                // ── CREAR producto nuevo ──
+                const res = await fetch('/api/productos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ nombre, precio, stock, minimo, imagen })
                 });
+                const r = await res.json();
+                if (r.error) { alert('❌ ' + r.error); return; }
+                nuevoId = r.id; // ID asignado por el servidor
             }
-            const r = await res.json();
-            if (r.error) { alert('❌ ' + r.error); return; }
+
+            // ── Si hay foto pendiente, subirla ahora que ya tenemos el ID ──
+            if (archivoPendiente && nuevoId) {
+                btn.textContent = '⏳ Subiendo foto...';
+                await subirImagenAServidor(archivoPendiente, nuevoId);
+                archivoPendiente = null;
+            }
+
             cerrarModal();
             cargar();
+
         } catch(e) {
-            alert('Error al guardar');
+            alert('Error al guardar: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Guardar';
         }
     }
 
+    // ─── ELIMINAR ────────────────────────────────────────────────────────────
     function confirmarEliminar(id, nombre) {
         document.getElementById('confirm-texto').textContent = `¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`;
         document.getElementById('modal-confirm').classList.add('activo');
@@ -369,7 +450,6 @@
 </script>
 
 <script>
-    // Mostrar opciones de admin si corresponde
     fetch('/api/sesion').then(r => r.json()).then(s => {
         if (s.rol === 'admin') {
             const u = document.getElementById('nav-usuarios');
