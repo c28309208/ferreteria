@@ -12,16 +12,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tlapaleria-mirador-2026-secreto')
 
 def keep_alive():
-    url = os.environ.get('RENDER_EXTERNAL_URL', '')
-    if not url:
-        return
+    url = os.environ.get('RENDER_EXTERNAL_URL', '').strip().rstrip('/')
+    time.sleep(30)  # Espera a que Flask levante antes del primer ping
     while True:
-        time.sleep(600)
         try:
             urllib.request.urlopen(f'{url}/ping', timeout=10)
             print("✅ Keep-alive ping enviado")
         except Exception as e:
             print(f"⚠️ Keep-alive error: {e}")
+        time.sleep(540)  # 9 minutos entre pings
 
 @app.route('/ping')
 def ping():
