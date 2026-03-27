@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Truper – Tlapalería El Mirador</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+        .header { background: #16213e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
+        .header h1 { color: #e94560; font-size: 20px; }
+        .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+        .nav a { color: #888; text-decoration: none; padding: 8px 13px; border-radius: 8px; font-size: 13px; transition: all 0.2s; }
+        .nav a:hover { background: #1a1a2e; color: white; }
+        .nav a.active { background: #e94560; color: white; }
+
+        .container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+        /* Upload zone */
+        .upload-card { background: #16213e; border-radius: 14px; padding: 28px; margin-bottom: 24px; border: 2px dashed #444; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+        .upload-card h2 { color: #e94560; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .upload-card p { color: #888; font-size: 13px; }
+        .btn-upload { background: #e94560; color: white; border: none; border-radius: 8px; padding: 12px 24px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+        .btn-upload:hover { background: #c73652; }
+        .btn-upload:disabled { background: #555; cursor: not-allowed; }
+        #file-input { display: none; }
+
+        /* Progress */
+        .progress-wrap { flex: 1; min-width: 200px; display: none; }
+        .progress-bar-bg { background: #2a2a4a; border-radius: 10px; height: 12px; overflow: hidden; margin-top: 8px; }
+        .progress-bar-fill { background: linear-gradient(90deg, #e94560, #4ecca3); height: 100%; border-radius: 10px; transition: width 0.4s; width: 0%; }
+        .progress-label { font-size: 13px; color: #4ecca3; margin-top: 4px; }
+
+        /* Stats */
+        .stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-card { background: #16213e; border-radius: 10px; padding: 16px 22px; flex: 1; min-width: 130px; text-align: center; }
+        .stat-card .num { font-size: 28px; font-weight: bold; color: #e94560; }
+        .stat-card .label { font-size: 12px; color: #888; margin-top: 4px; }
+
+        /* Buscador */
+        .buscador-row { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+        .input-buscar { flex: 1; padding: 12px 16px; border-radius: 8px; border: 2px solid #e94560; background: #16213e; color: white; font-size: 15px; }
+        .input-buscar:focus { outline: none; border-color: #fff; }
+        .filtro-select { padding: 12px 16px; border-radius: 8px; border: 2px solid #555; background: #16213e; color: white; font-size: 14px; cursor: pointer; }
+
+        /* Tabla */
+        .tabla-wrap { background: #16213e; border-radius: 12px; overflow: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th { background: #e94560; color: white; padding: 12px 14px; text-align: left; white-space: nowrap; }
+        tbody tr { border-bottom: 1px solid #2a2a4a; transition: background 0.15s; }
+        tbody tr:hover { background: #1e1e3a; }
+        tbody td { padding: 10px 14px; vertical-align: middle; }
+        .badge-stock { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+        .badge-ok { background: #1a4a2a; color: #4ecca3; }
+        .badge-bajo { background: #4a2a1a; color: #ff9966; }
+        .badge-agotado { background: #4a1a1a; color: #ff6b6b; }
+        .badge-no { background: #2a2a2a; color: #888; }
+        .precio-catalogo { color: #e94560; font-weight: bold; }
+        .precio-venta { color: #4ecca3; }
+        .codigo-chip { background: #2a2a4a; color: #aaa; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-family: monospace; }
+        .clave-chip { background: #1e2a4a; color: #88aaff; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-family: monospace; }
+        .btn-accion { border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        .btn-agregar { background: #4ecca3; color: #1a1a2e; }
+        .btn-agregar:hover { background: #3ab890; }
+        .btn-en-inv { background: #2a3a2a; color: #4ecca3; cursor: default; }
+        .sin-datos { text-align: center; color: #666; padding: 40px; font-size: 15px; }
+
+        /* Modal agregar */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); justify-content: center; align-items: center; z-index: 200; }
+        .modal.activo { display: flex; }
+        .modal-content { background: #16213e; border-radius: 14px; padding: 28px; width: 420px; border: 2px solid #e94560; }
+        .modal-content h3 { color: #e94560; margin-bottom: 20px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #444; background: #1a1a2e; color: white; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #e94560; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-confirmar-modal { flex: 1; padding: 12px; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-cancelar-modal { flex: 1; padding: 12px; background: transparent; color: #888; border: 1px solid #888; border-radius: 8px; font-size: 14px; cursor: pointer; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #555; }
+        .empty-state .icon { font-size: 64px; margin-bottom: 16px; }
+        .empty-state p { font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+        <h1>🔧 Tlapalería El Mirador</h1>
+        <img src="https://1000logos.net/wp-content/uploads/2021/05/Truper-logo.png" alt="Truper"
+             style="height:24px;opacity:0.85;filter:brightness(0) invert(1);" onerror="this.style.display='none'">
+    </div>
+    <nav class="nav">
+        <a href="/">🏠 POS</a>
+        <a href="/productos">📦 Inventario</a>
+        <a href="/proveedores">🚛 Proveedores</a>
+        <a href="/reportes">📊 Reportes</a>
+        <a href="/ticket">🧾 Tickets</a>
+        <a href="/truper" class="active">🟡 Truper</a>
+        <a href="/usuarios" id="nav-usuarios" style="display:none">👥 Usuarios</a>
+        <a href="/logs" id="nav-logs" style="display:none">📋 Logs</a>
+        <a href="/logout" style="background:#2a2a4a;color:#ff6b6b;">⏏ Salir</a>
+    </nav>
+</div>
+
+<div class="container">
+
+    <!-- Upload PDF -->
+    <div class="upload-card">
+        <div style="flex:1;">
+            <h2>🟡 Catálogo Truper 2025</h2>
+            <p>Sube el PDF del catálogo Truper para sincronizar precios y agregar productos al inventario.</p>
+            <p id="ultima-sync" style="color:#4ecca3; margin-top:6px; font-size:12px;"></p>
+        </div>
+        <div class="progress-wrap" id="progress-wrap">
+            <div style="font-size:13px; color:#aaa;">Procesando catálogo...</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+            <div class="progress-label" id="progress-label">0%</div>
+        </div>
+        <div>
+            <input type="file" id="file-input" accept=".pdf">
+            <button class="btn-upload" id="btn-upload" onclick="document.getElementById('file-input').click()">
+                📄 Subir PDF Truper
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="num" id="stat-total">—</div>
+            <div class="label">Productos en catálogo</div>
+        </div>
+        <div class="stat-card">
+            <div class="num" id="stat-en-inv" style="color:#4ecca3;">—</div>
+            <div class="label">En tu inventario</div>
+        </div>
+        <div class="stat-card">
+            <div class="num" id="stat-sin-inv" style="color:#888;">—</div>
+            <div class="label">Sin agregar</div>
+        </div>
+        <div class="stat-card">
+            <div class="num" id="stat-stock-bajo" style="color:#ff9966;">—</div>
+            <div class="label">Stock bajo / agotado</div>
+        </div>
+    </div>
+
+    <!-- Buscador -->
+    <div class="buscador-row">
+        <input type="text" class="input-buscar" id="buscador" placeholder="🔍 Buscar por nombre, código o clave..." oninput="filtrar()">
+        <select class="filtro-select" id="filtro-estado" onchange="filtrar()">
+            <option value="todos">Todos</option>
+            <option value="en_inventario">En inventario</option>
+            <option value="sin_inventario">Sin agregar</option>
+            <option value="stock_bajo">Stock bajo</option>
+        </select>
+    </div>
+
+    <!-- Tabla catálogo -->
+    <div class="tabla-wrap" id="tabla-wrap">
+        <div class="empty-state">
+            <div class="icon">🟡</div>
+            <p>Sube el PDF del catálogo Truper para comenzar.</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal agregar a inventario -->
+<div class="modal" id="modal-agregar">
+    <div class="modal-content">
+        <h3>➕ Agregar a Inventario</h3>
+        <input type="hidden" id="m-codigo">
+        <input type="hidden" id="m-clave">
+        <div class="form-group">
+            <label>Nombre del producto</label>
+            <input type="text" id="m-nombre" placeholder="Nombre para mostrar en el POS">
+        </div>
+        <div class="form-group">
+            <label>Precio de venta al público ($)</label>
+            <input type="number" id="m-precio" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+            <label>Stock inicial</label>
+            <input type="number" id="m-stock" value="0" min="0">
+        </div>
+        <div class="form-group">
+            <label>Stock mínimo (alerta)</label>
+            <input type="number" id="m-minimo" value="5" min="0">
+        </div>
+        <div class="form-group">
+            <label>URL de imagen (opcional)</label>
+            <input type="text" id="m-imagen" placeholder="https://...">
+        </div>
+        <div style="font-size:12px; color:#666; margin-top:-6px;">
+            Clave Truper: <span id="m-clave-display" style="color:#88aaff; font-family:monospace;"></span> &nbsp;|&nbsp;
+            Precio catálogo: <span id="m-precio-cat" style="color:#e94560; font-weight:bold;"></span>
+        </div>
+        <div class="modal-btns">
+            <button class="btn-confirmar-modal" onclick="confirmarAgregar()">✅ Agregar</button>
+            <button class="btn-cancelar-modal" onclick="cerrarModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let catalogoCompleto = [];
+    let catalogoFiltrado = [];
+
+    // ─── Carga inicial ───
+    async function cargarCatalogo() {
+        try {
+            const res = await fetch('/api/truper/catalogo');
+            catalogoCompleto = await res.json();
+            if (catalogoCompleto.length > 0) {
+                actualizarStats();
+                filtrar();
+            }
+        } catch(e) { console.error('Error cargando catálogo', e); }
+    }
+
+    // ─── Stats ───
+    function actualizarStats() {
+        const total = catalogoCompleto.length;
+        const enInv = catalogoCompleto.filter(p => p.en_inventario).length;
+        const sinInv = total - enInv;
+        const stockBajo = catalogoCompleto.filter(p => p.en_inventario && p.stock <= 3).length;
+        document.getElementById('stat-total').textContent = total.toLocaleString();
+        document.getElementById('stat-en-inv').textContent = enInv.toLocaleString();
+        document.getElementById('stat-sin-inv').textContent = sinInv.toLocaleString();
+        document.getElementById('stat-stock-bajo').textContent = stockBajo.toLocaleString();
+
+        // Última sync
+        const conFecha = catalogoCompleto.find(p => p.ultima_actualizacion);
+        if (conFecha) {
+            document.getElementById('ultima-sync').textContent =
+                '✅ Última sincronización: ' + conFecha.ultima_actualizacion;
+        }
+    }
+
+    // ─── Filtrar ───
+    function filtrar() {
+        const q = document.getElementById('buscador').value.toLowerCase().trim();
+        const estado = document.getElementById('filtro-estado').value;
+
+        catalogoFiltrado = catalogoCompleto.filter(p => {
+            const texto = `${p.codigo} ${p.clave} ${p.nombre}`.toLowerCase();
+            const matchQ = !q || texto.includes(q);
+            let matchEstado = true;
+            if (estado === 'en_inventario') matchEstado = p.en_inventario;
+            if (estado === 'sin_inventario') matchEstado = !p.en_inventario;
+            if (estado === 'stock_bajo') matchEstado = p.en_inventario && p.stock <= 3;
+            return matchQ && matchEstado;
+        });
+
+        renderTabla();
+    }
+
+    // ─── Render tabla ───
+    function renderTabla() {
+        const wrap = document.getElementById('tabla-wrap');
+
+        if (catalogoCompleto.length === 0) {
+            wrap.innerHTML = `<div class="empty-state"><div class="icon">🟡</div><p>Sube el PDF del catálogo Truper para comenzar.</p></div>`;
+            return;
+        }
+        if (catalogoFiltrado.length === 0) {
+            wrap.innerHTML = `<div class="sin-datos">Sin resultados para tu búsqueda 🔍</div>`;
+            return;
+        }
+
+        // Mostrar máx 200 filas para no saturar
+        const mostrar = catalogoFiltrado.slice(0, 200);
+        const hayMas = catalogoFiltrado.length > 200;
+
+        let html = `<table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Clave</th>
+                    <th>Nombre / Descripción</th>
+                    <th>Precio Catálogo</th>
+                    <th>Precio Venta</th>
+                    <th>Stock</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        mostrar.forEach(p => {
+            const stockBadge = p.en_inventario
+                ? (p.stock <= 0
+                    ? `<span class="badge-stock badge-agotado">Agotado</span>`
+                    : p.stock <= 3
+                        ? `<span class="badge-stock badge-bajo">⚠️ ${p.stock}</span>`
+                        : `<span class="badge-stock badge-ok">✅ ${p.stock}</span>`)
+                : `<span class="badge-stock badge-no">—</span>`;
+
+            const btnAccion = p.en_inventario
+                ? `<button class="btn-accion btn-en-inv">✅ En inventario</button>`
+                : `<button class="btn-accion btn-agregar" onclick='abrirAgregar(${JSON.stringify(p)})'>➕ Agregar</button>`;
+
+            const nombre = p.nombre || `<span style="color:#555;font-style:italic">Sin descripción</span>`;
+            const precioVenta = p.precio_venta ? `<span class="precio-venta">$${parseFloat(p.precio_venta).toFixed(2)}</span>` : '—';
+
+            html += `<tr>
+                <td><span class="codigo-chip">${p.codigo}</span></td>
+                <td><span class="clave-chip">${p.clave || '—'}</span></td>
+                <td>${nombre}</td>
+                <td><span class="precio-catalogo">$${parseFloat(p.precio_catalogo || 0).toFixed(2)}</span></td>
+                <td>${precioVenta}</td>
+                <td>${stockBadge}</td>
+                <td>${btnAccion}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+
+        if (hayMas) {
+            html += `<div style="text-align:center; padding:12px; color:#888; font-size:13px;">
+                Mostrando 200 de ${catalogoFiltrado.length} resultados. Refina tu búsqueda para ver más.
+            </div>`;
+        }
+
+        wrap.innerHTML = html;
+    }
+
+    // ─── Upload PDF ───
+    document.getElementById('file-input').addEventListener('change', async function() {
+        const file = this.files[0];
+        if (!file) return;
+
+        const btn = document.getElementById('btn-upload');
+        const progressWrap = document.getElementById('progress-wrap');
+        btn.disabled = true;
+        btn.textContent = '⏳ Procesando...';
+        progressWrap.style.display = 'block';
+
+        // Subir PDF
+        const form = new FormData();
+        form.append('pdf', file);
+
+        try {
+            const res = await fetch('/api/truper/subir', { method: 'POST', body: form });
+            const data = await res.json();
+            if (data.error) {
+                alert('Error: ' + data.error);
+                resetUpload();
+                return;
+            }
+
+            // Polling de estado
+            const jobId = data.job_id;
+            pollEstado(jobId);
+        } catch(e) {
+            alert('Error subiendo el PDF. Intenta de nuevo.');
+            resetUpload();
+        }
+    });
+
+    function pollEstado(jobId) {
+        const intervalo = setInterval(async () => {
+            try {
+                const res = await fetch('/api/truper/estado/' + jobId);
+                const job = await res.json();
+
+                document.getElementById('progress-fill').style.width = job.progreso + '%';
+                document.getElementById('progress-label').textContent = job.progreso + '%';
+
+                if (job.estado === 'listo') {
+                    clearInterval(intervalo);
+                    const r = job.resultado;
+                    resetUpload();
+                    alert(`✅ ¡Sincronización completada!\n\n📦 Productos nuevos agregados al inventario: ${r.nuevos}\n🔄 Precios actualizados en inventario: ${r.actualizados}\n📋 Total procesados del catálogo: ${r.total}`);
+                    cargarCatalogo();
+                } else if (job.estado === 'error') {
+                    clearInterval(intervalo);
+                    alert('⚠️ Error procesando el PDF: ' + (job.resultado?.error || 'Error desconocido'));
+                    resetUpload();
+                }
+            } catch(e) {
+                clearInterval(intervalo);
+                resetUpload();
+            }
+        }, 2000);
+    }
+
+    function resetUpload() {
+        const btn = document.getElementById('btn-upload');
+        btn.disabled = false;
+        btn.textContent = '📄 Subir PDF Truper';
+        document.getElementById('progress-wrap').style.display = 'none';
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('file-input').value = '';
+    }
+
+    // ─── Modal agregar ───
+    function abrirAgregar(p) {
+        document.getElementById('m-codigo').value = p.codigo;
+        document.getElementById('m-clave').value = p.clave;
+        document.getElementById('m-nombre').value = p.nombre || '';
+        document.getElementById('m-precio').value = parseFloat(p.precio_catalogo || 0).toFixed(2);
+        document.getElementById('m-stock').value = 0;
+        document.getElementById('m-minimo').value = 5;
+        document.getElementById('m-imagen').value = '';
+        document.getElementById('m-clave-display').textContent = p.clave;
+        document.getElementById('m-precio-cat').textContent = '$' + parseFloat(p.precio_catalogo || 0).toFixed(2);
+        document.getElementById('modal-agregar').classList.add('activo');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-agregar').classList.remove('activo');
+    }
+
+    async function confirmarAgregar() {
+        const payload = {
+            codigo: document.getElementById('m-codigo').value,
+            clave: document.getElementById('m-clave').value,
+            nombre: document.getElementById('m-nombre').value.trim(),
+            precio: parseFloat(document.getElementById('m-precio').value),
+            stock: parseInt(document.getElementById('m-stock').value),
+            minimo: parseInt(document.getElementById('m-minimo').value),
+            imagen: document.getElementById('m-imagen').value.trim()
+        };
+
+        if (!payload.nombre) { alert('El nombre es obligatorio'); return; }
+
+        try {
+            const res = await fetch('/api/truper/agregar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const r = await res.json();
+            if (r.error) { alert('⚠️ ' + r.error); return; }
+            cerrarModal();
+            alert('✅ Producto agregado al inventario');
+            cargarCatalogo();
+        } catch(e) {
+            alert('Error al agregar el producto');
+        }
+    }
+
+    // ─── Nav admin ───
+    fetch('/api/sesion').then(r => r.json()).then(s => {
+        if (s.rol === 'admin') {
+            document.getElementById('nav-usuarios').style.display = '';
+            document.getElementById('nav-logs').style.display = '';
+        }
+    }).catch(() => {});
+
+    // Cargar al iniciar
+    cargarCatalogo();
+</script>
+</body>
+</html>

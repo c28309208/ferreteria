@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tlapalería El Mirador - POS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+        .header { background: #16213e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
+        .header h1 { color: #e94560; font-size: 20px; }
+        .nav { display: flex; gap: 6px; }
+        .nav a { color: #888; text-decoration: none; padding: 8px 13px; border-radius: 8px; font-size: 13px; transition: all 0.2s; }
+        .nav a:hover { background: #1a1a2e; color: white; }
+        .nav a.active { background: #e94560; color: white; }
+        .container { display: flex; height: calc(100vh - 60px); }
+        .panel-productos { flex: 1; padding: 20px; overflow-y: auto; }
+        .buscar { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e94560; background: #16213e; color: white; font-size: 16px; margin-bottom: 20px; }
+        .buscar:focus { outline: none; border-color: #fff; }
+        .grid-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .producto-card { background: #16213e; border-radius: 10px; padding: 15px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .producto-card:hover { border-color: #e94560; transform: scale(1.02); }
+        .producto-card.sin-stock { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+        .producto-card.sin-stock:hover { border-color: transparent; transform: none; }
+        .sin-stock-label { color: #ff4444; font-size: 12px; font-weight: bold; margin-top: 5px; }
+        .producto-card h3 { font-size: 14px; margin-bottom: 8px; }
+        .producto-card .precio { color: #e94560; font-size: 20px; font-weight: bold; }
+        .producto-card .stock { font-size: 12px; color: #888; margin-top: 5px; }
+        .stock-bajo { color: #ff6b6b !important; }
+        .panel-ticket { width: 320px; background: #16213e; padding: 20px; display: flex; flex-direction: column; border-left: 2px solid #e94560; }
+        .panel-ticket h2 { color: #e94560; margin-bottom: 15px; text-align: center; font-size: 18px; }
+        .ticket-items { flex: 1; overflow-y: auto; }
+        .ticket-item { background: #1a1a2e; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .ticket-item-info { flex: 1; }
+        .ticket-item-info span { font-size: 13px; color: #888; }
+        .ticket-item-precio { color: #e94560; font-weight: bold; }
+        .btn-quitar { background: none; border: none; color: #ff6b6b; cursor: pointer; font-size: 18px; margin-left: 10px; }
+        .ticket-total { border-top: 2px solid #e94560; padding-top: 15px; margin-top: 15px; }
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #888; }
+        .total-final { display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; color: white; margin: 10px 0; }
+        .btn-cobrar { width: 100%; padding: 15px; background: #e94560; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .btn-cobrar:hover { background: #c73652; }
+        .btn-limpiar { width: 100%; padding: 10px; background: transparent; color: #888; border: 1px solid #888; border-radius: 10px; font-size: 14px; cursor: pointer; margin-top: 8px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 100; }
+        .modal.activo { display: flex; }
+        .modal-content { background: #16213e; border-radius: 15px; padding: 30px; width: 350px; border: 2px solid #e94560; }
+        .modal-content h2 { color: #e94560; margin-bottom: 20px; text-align: center; }
+        .modal-total { font-size: 32px; font-weight: bold; text-align: center; margin-bottom: 20px; }
+        .input-pago { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e94560; background: #1a1a2e; color: white; font-size: 20px; text-align: center; margin-bottom: 15px; }
+        .cambio { text-align: center; font-size: 18px; color: #4ecca3; margin-bottom: 20px; min-height: 30px; }
+        .metodos-pago { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-metodo { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #888; background: transparent; color: white; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .btn-metodo.activo { border-color: #e94560; background: #e94560; }
+        .btn-confirmar { width: 100%; padding: 15px; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-cancelar-modal { width: 100%; padding: 10px; background: transparent; color: #888; border: 1px solid #888; border-radius: 10px; font-size: 14px; cursor: pointer; margin-top: 8px; }
+        .ticket-impreso { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 200; }
+        .ticket-impreso.activo { display: flex; }
+        .ticket-papel { background: white; color: black; width: 300px; padding: 20px; border-radius: 10px; font-family: monospace; }
+        .ticket-papel h2 { text-align: center; font-size: 16px; }
+        .ticket-papel p { text-align: center; font-size: 12px; color: #666; }
+        .ticket-papel hr { border: 1px dashed #ccc; margin: 10px 0; }
+        .ticket-papel .t-item { display: flex; justify-content: space-between; font-size: 13px; margin: 5px 0; }
+        .ticket-papel .t-total { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; }
+        .btn-imprimir { width: 100%; padding: 12px; background: #e94560; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 15px; }
+        .btn-nueva-venta { width: 100%; padding: 12px; background: #4ecca3; color: #1a1a2e; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+        .cargando { text-align: center; color: #888; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+        <h1>🔧 Tlapalería El Mirador</h1>
+        <img src="https://1000logos.net/wp-content/uploads/2021/05/Truper-logo.png" alt="Truper"
+             style="height:24px;opacity:0.85;filter:brightness(0) invert(1);" onerror="this.style.display='none'">
+    </div>
+    <nav class="nav">
+        <a href="/" class="active">🏠 POS</a>
+        <a href="/productos">📦 Inventario</a>
+        <a href="/proveedores">🚛 Proveedores</a>
+        <a href="/reportes">📊 Reportes</a>
+        <a href="/ticket">🧾 Tickets</a>
+        <a href="/truper">🟡 Truper</a>
+        <a href="/usuarios" id="nav-usuarios" style="display:none">👥 Usuarios</a>
+        <a href="/logs" id="nav-logs" style="display:none">📋 Logs</a>
+        <a href="/logout" style="background:#2a2a4a;color:#ff6b6b;">⏏ Salir</a>
+    </nav>
+    <span id="fecha"></span>
+</div>
+
+<div class="container">
+    <div class="panel-productos">
+        <input type="text" class="buscar" id="buscar" placeholder="🔍 Buscar producto..." oninput="buscarProducto()">
+        <div class="grid-productos" id="grid-productos">
+            <p class="cargando">Cargando productos... ⏳</p>
+        </div>
+    </div>
+
+    <div class="panel-ticket">
+        <h2>🧾 TICKET #<span id="num-ticket">0001</span></h2>
+        <div class="ticket-items" id="ticket-items">
+            <p style="color:#888; text-align:center; margin-top:50px">Selecciona productos 👆</p>
+        </div>
+        <div class="ticket-total">
+            <div class="total-final"><span>TOTAL</span><span id="total">$0.00</span></div>
+            <button class="btn-cobrar" onclick="abrirCobro()">💰 COBRAR</button>
+            <button class="btn-limpiar" onclick="limpiarTicket()">🗑️ Limpiar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cobro -->
+<div class="modal" id="modal-cobro">
+    <div class="modal-content">
+        <h2>💰 Cobrar</h2>
+        <div class="modal-total" id="modal-total">$0.00</div>
+        <div class="metodos-pago">
+            <button class="btn-metodo activo" onclick="selMetodo(this,'efectivo')">💵 Efectivo</button>
+            <button class="btn-metodo" onclick="selMetodo(this,'tarjeta')">💳 Tarjeta</button>
+            <button class="btn-metodo" onclick="selMetodo(this,'transferencia')">📱 Transfer</button>
+        </div>
+        <input type="number" class="input-pago" id="input-pago" placeholder="Monto recibido" oninput="calcularCambio()">
+        <div class="cambio" id="cambio"></div>
+        <button class="btn-confirmar" onclick="confirmarVenta()">✅ CONFIRMAR VENTA</button>
+        <button class="btn-cancelar-modal" onclick="cerrarModal()">Cancelar</button>
+    </div>
+</div>
+
+<!-- Ticket impreso -->
+<div class="ticket-impreso" id="ticket-impreso">
+    <div class="ticket-papel">
+        <h2>🔧 TLAPALERÍA EL MIRADOR</h2>
+        <p>Tel: 55-1234-5678</p>
+        <p id="t-fecha"></p>
+        <hr>
+        <div id="t-items"></div>
+        <hr>
+        <div class="t-total"><span>TOTAL:</span><span id="t-total"></span></div>
+        <div class="t-total" style="color:#666; font-weight:normal; font-size:13px">
+            <span>Forma de pago:</span><span id="t-metodo"></span>
+        </div>
+        <div class="t-total" style="color:#666; font-weight:normal; font-size:13px" id="row-pago">
+            <span>Pagó:</span><span id="t-pago"></span>
+        </div>
+        <div class="t-total" style="color:green" id="row-cambio">
+            <span>Cambio:</span><span id="t-cambio"></span>
+        </div>
+        <hr>
+        <p>¡Gracias por su compra!</p>
+        <p>Vuelva pronto 😊</p>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn-nueva-venta" onclick="nuevaVenta()">✅ Nueva Venta</button>
+    </div>
+</div>
+
+<script>
+    let carrito = [];
+    let metodo = 'efectivo';
+    let numTicket = 1;
+
+    const fecha = new Date();
+    document.getElementById('fecha').textContent = fecha.toLocaleDateString('es-MX', 
+        {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+    async function cargarProductos() {
+        try {
+            const res = await fetch('/buscar?q=');
+            const productos = await res.json();
+            mostrarProductos(productos);
+        } catch(e) {
+            document.getElementById('grid-productos').innerHTML = 
+                '<p class="cargando">Error cargando productos ❌</p>';
+        }
+    }
+
+    function mostrarProductos(productos) {
+        const grid = document.getElementById('grid-productos');
+        if (!productos || productos.length === 0) {
+            grid.innerHTML = '<p class="cargando">No hay productos 📦</p>';
+            return;
+        }
+        grid.innerHTML = '';
+        productos.forEach(p => {
+            const stockClass = p.stock <= p.minimo ? 'stock-bajo' : '';
+            const sinStock = p.stock <= 0;
+            const card = document.createElement('div');
+            card.className = `producto-card${sinStock ? ' sin-stock' : ''}`;
+            const imgHtml = p.imagen
+                ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:100%;height:80px;object-fit:contain;border-radius:6px;margin-bottom:8px;background:#1a1a2e;" onerror="this.style.display='none'">`
+                : '';
+            card.innerHTML = `
+                ${imgHtml}
+                <h3>${p.nombre}</h3>
+                <div class="precio">$${p.precio}</div>
+                <div class="stock ${stockClass}">
+                    ${sinStock ? '🚫' : p.stock <= p.minimo ? '⚠️' : '📦'} Stock: ${p.stock}
+                </div>
+                ${sinStock ? '<div class="sin-stock-label">AGOTADO</div>' : ''}`;
+            if (!sinStock) {
+                card.addEventListener('click', () => agregarAlCarrito(p.id, p.nombre, p.precio));
+            }
+            grid.appendChild(card);
+        });
+    }
+
+    async function buscarProducto() {
+        const q = document.getElementById('buscar').value;
+        const res = await fetch(`/buscar?q=${q}`);
+        const productos = await res.json();
+        mostrarProductos(productos);
+    }
+
+    function agregarAlCarrito(id, nombre, precio) {
+        const existente = carrito.find(i => i.id === id);
+        if (existente) {
+            existente.cantidad++;
+        } else {
+            carrito.push({ id, nombre, precio, cantidad: 1 });
+        }
+        actualizarTicket();
+    }
+
+    function quitarDelCarrito(id) {
+        carrito = carrito.filter(i => i.id !== id);
+        actualizarTicket();
+    }
+
+    function actualizarTicket() {
+        const container = document.getElementById('ticket-items');
+        if (carrito.length === 0) {
+            container.innerHTML = '<p style="color:#888; text-align:center; margin-top:50px">Selecciona productos 👆</p>';
+            document.getElementById('total').textContent = '$0.00';
+            return;
+        }
+        let html = '';
+        let total = 0;
+        carrito.forEach(item => {
+            const sub = item.precio * item.cantidad;
+            total += sub;
+            html += `
+                <div class="ticket-item">
+                    <div class="ticket-item-info">
+                        <strong>${item.nombre}</strong><br>
+                        <span>${item.cantidad} x $${item.precio}</span>
+                    </div>
+                    <div class="ticket-item-precio">$${sub.toFixed(2)}</div>
+                    <button class="btn-quitar" onclick="quitarDelCarrito(${item.id})">×</button>
+                </div>`;
+        });
+        container.innerHTML = html;
+        document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function limpiarTicket() {
+        carrito = [];
+        actualizarTicket();
+    }
+
+    function abrirCobro() {
+        if (carrito.length === 0) return alert('Agrega productos primero');
+        const total = document.getElementById('total').textContent;
+        document.getElementById('modal-total').textContent = total;
+        document.getElementById('input-pago').value = '';
+        document.getElementById('cambio').textContent = '';
+        document.getElementById('input-pago').style.display = 'block';
+        document.getElementById('modal-cobro').classList.add('activo');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-cobro').classList.remove('activo');
+    }
+
+    function selMetodo(btn, m) {
+        metodo = m;
+        document.querySelectorAll('.btn-metodo').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+        const inputPago = document.getElementById('input-pago');
+        inputPago.style.display = m === 'efectivo' ? 'block' : 'none';
+        document.getElementById('cambio').textContent = '';
+    }
+
+    function calcularCambio() {
+        const total = parseFloat(document.getElementById('total').textContent.replace('$',''));
+        const pago = parseFloat(document.getElementById('input-pago').value);
+        if (pago >= total) {
+            document.getElementById('cambio').textContent = `Cambio: $${(pago - total).toFixed(2)}`;
+        } else {
+            document.getElementById('cambio').textContent = 'Monto insuficiente ⚠️';
+        }
+    }
+
+    async function confirmarVenta() {
+        const items = carrito.map(i => ({ id: i.id, cantidad: i.cantidad }));
+        const pago = parseFloat(document.getElementById('input-pago').value) || 0;
+        const total = parseFloat(document.getElementById('total').textContent.replace('$',''));
+        const cambio = pago - total;
+
+        if (metodo === 'efectivo' && pago < total) {
+            alert('⚠️ El monto recibido es menor al total');
+            return;
+        }
+
+        try {
+            const res = await fetch('/venta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items, metodo })
+            });
+
+            const ticket = await res.json();
+
+            if (ticket.error) {
+                alert('⚠️ ' + ticket.error);
+                return;
+            }
+
+            cerrarModal();
+            mostrarTicket(ticket, pago, cambio);
+
+        } catch(e) {
+            alert('Error procesando venta, intenta de nuevo');
+            console.error(e);
+        }
+    }
+
+    function mostrarTicket(ticket, pago, cambio) {
+        const ahora = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+        document.getElementById('t-fecha').textContent = ahora;
+        document.getElementById('t-total').textContent = `$${ticket.total.toFixed(2)}`;
+
+        // Forma de pago
+        const iconosMetodo = { efectivo: '💵 Efectivo', tarjeta: '💳 Tarjeta', transferencia: '📱 Transferencia' };
+        document.getElementById('t-metodo').textContent = iconosMetodo[metodo] || metodo;
+
+        // Mostrar Pagó y Cambio solo si es efectivo
+        if (metodo === 'efectivo') {
+            document.getElementById('row-pago').style.display = '';
+            document.getElementById('row-cambio').style.display = '';
+            document.getElementById('t-pago').textContent = `$${pago.toFixed(2)}`;
+            document.getElementById('t-cambio').textContent = `$${cambio.toFixed(2)}`;
+        } else {
+            document.getElementById('row-pago').style.display = 'none';
+            document.getElementById('row-cambio').style.display = 'none';
+        }
+
+        let html = '';
+        ticket.items.forEach(i => {
+            html += `
+                <div class="t-item">
+                    <span>${i.nombre} x${i.cantidad}</span>
+                    <span>$${i.subtotal}</span>
+                </div>`;
+        });
+        document.getElementById('t-items').innerHTML = html;
+        document.getElementById('ticket-impreso').classList.add('activo');
+        numTicket++;
+        document.getElementById('num-ticket').textContent = String(numTicket).padStart(4, '0');
+    }
+
+    function nuevaVenta() {
+        document.getElementById('ticket-impreso').classList.remove('activo');
+        limpiarTicket();
+        cargarProductos();
+    }
+
+    cargarProductos();
+</script>
+
+<script>
+    fetch('/api/sesion').then(r => r.json()).then(s => {
+        if (s.rol === 'admin') {
+            const u = document.getElementById('nav-usuarios');
+            const l = document.getElementById('nav-logs');
+            if (u) u.style.display = '';
+            if (l) l.style.display = '';
+        }
+    }).catch(() => {});
+</script>
+</body>
+</html>

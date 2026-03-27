@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios — Tlapalería El Mirador</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+        .header { background: #16213e; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e94560; }
+        .header h1 { color: #e94560; font-size: 20px; }
+        .nav { display: flex; gap: 6px; }
+        .nav a { color: #888; text-decoration: none; padding: 8px 13px; border-radius: 8px; font-size: 13px; transition: all 0.2s; }
+        .nav a:hover { background: #1a1a2e; color: white; }
+        .nav a.active { background: #e94560; color: white; }
+        .nav a.logout { background: #2a2a4a; color: #ff6b6b; }
+        .nav a.logout:hover { background: #ff6b6b; color: white; }
+
+        .container { padding: 25px; max-width: 1100px; margin: 0 auto; }
+        .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+        @media(max-width:800px){ .main-grid { grid-template-columns: 1fr; } }
+
+        .card { background: #16213e; border-radius: 12px; overflow: hidden; }
+        .card-header { background: #0f1628; padding: 14px 18px; border-bottom: 1px solid #2a2a4a; }
+        .card-header h3 { color: #e94560; font-size: 15px; }
+        .card-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+        .campo label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+        .campo input, .campo select { width: 100%; padding: 10px 13px; border-radius: 8px; border: 2px solid #2a2a4a; background: #1a1a2e; color: white; font-size: 14px; }
+        .campo input:focus, .campo select:focus { outline: none; border-color: #e94560; }
+
+        .btn { padding: 11px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; }
+        .btn-primary { background: #e94560; color: white; width: 100%; }
+        .btn-primary:hover { background: #c73652; }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #0f1628; }
+        th { padding: 12px 14px; text-align: left; font-size: 11px; color: #888; text-transform: uppercase; }
+        td { padding: 13px 14px; border-bottom: 1px solid #1a1a2e; font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #1e2240; }
+
+        .badge-admin { background: rgba(233,69,96,0.2); color: #e94560; border: 1px solid rgba(233,69,96,0.3); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .badge-emp { background: rgba(78,204,163,0.2); color: #4ecca3; border: 1px solid rgba(78,204,163,0.3); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+
+        .acciones { display: flex; gap: 6px; }
+        .abtn { padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+        .abtn-pwd { background: rgba(122,179,255,0.15); color: #7ab3ff; border: 1px solid rgba(122,179,255,0.3); }
+        .abtn-pwd:hover { background: #7ab3ff; color: #1a1a2e; }
+        .abtn-del { background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.3); }
+        .abtn-del:hover { background: #ff6b6b; color: white; }
+
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:100; }
+        .modal.activo { display: flex; }
+        .modal-box { background: #16213e; border-radius: 15px; padding: 28px; width: 340px; border: 2px solid #e94560; }
+        .modal-box h3 { color: #e94560; margin-bottom: 18px; }
+        .modal-box input { width:100%; padding:10px 13px; border-radius:8px; border:2px solid #2a2a4a; background:#1a1a2e; color:white; font-size:14px; margin-bottom:15px; }
+        .modal-box input:focus { outline:none; border-color:#e94560; }
+        .modal-btns { display:flex; gap:10px; }
+        .modal-btns .btn { flex:1; }
+        .btn-sec { background:#2a2a4a; color:#aaa; }
+        .btn-sec:hover { background:#3a3a5a; color:white; }
+
+        #toast { position:fixed; bottom:25px; right:25px; background:#4ecca3; color:#1a1a2e; padding:12px 22px; border-radius:10px; font-weight:bold; font-size:14px; transform:translateY(80px); opacity:0; transition:all 0.3s; z-index:999; }
+        #toast.show { transform:translateY(0); opacity:1; }
+        #toast.error { background:#e94560; color:white; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+        <h1>🔧 Tlapalería El Mirador</h1>
+    </div>
+    <nav class="nav">
+        <a href="/">🏠 POS</a>
+        <a href="/productos">📦 Inventario</a>
+        <a href="/proveedores">🚛 Proveedores</a>
+        <a href="/reportes">📊 Reportes</a>
+        <a href="/ticket">🧾 Tickets</a>
+        <a href="/truper">🟡 Truper</a>
+        <a href="/usuarios" class="active">👥 Usuarios</a>
+        <a href="/logs">📋 Logs</a>
+        <a href="/logout" class="logout">⏏ Salir</a>
+    </nav>
+</div>
+
+<div class="container">
+    <div class="main-grid">
+
+        <div class="card">
+            <div class="card-header"><h3>➕ Nuevo Usuario</h3></div>
+            <div class="card-body">
+                <div class="campo"><label>Nombre completo</label><input type="text" id="f-nombre" placeholder="Ej: Juan García"/></div>
+                <div class="campo"><label>Usuario (para login)</label><input type="text" id="f-usuario" placeholder="Ej: juan123"/></div>
+                <div class="campo"><label>Contraseña</label><input type="password" id="f-password" placeholder="Mínimo 4 caracteres"/></div>
+                <div class="campo">
+                    <label>Rol</label>
+                    <select id="f-rol">
+                        <option value="empleado">Empleado</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="crearUsuario()">💾 Crear Usuario</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3>👥 Usuarios del Sistema</h3></div>
+            <table>
+                <thead>
+                    <tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tbody">
+                    <tr><td colspan="4" style="text-align:center;padding:30px;color:#555">Cargando... ⏳</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal cambiar contraseña -->
+<div class="modal" id="modal-pwd">
+    <div class="modal-box">
+        <h3>🔑 Cambiar Contraseña</h3>
+        <input type="hidden" id="pwd-usuario">
+        <input type="password" id="pwd-nueva" placeholder="Nueva contraseña">
+        <div class="modal-btns">
+            <button class="btn btn-sec" onclick="document.getElementById('modal-pwd').classList.remove('activo')">Cancelar</button>
+            <button class="btn btn-primary" onclick="guardarPassword()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+    async function cargar() {
+        const res = await fetch('/api/usuarios');
+        const data = await res.json();
+        const tbody = document.getElementById('tbody');
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:#555">No hay usuarios</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(u => `
+            <tr>
+                <td><strong>${u.nombre || u.usuario}</strong></td>
+                <td style="color:#888">${u.usuario}</td>
+                <td><span class="${u.rol === 'admin' ? 'badge-admin' : 'badge-emp'}">${u.rol}</span></td>
+                <td>
+                    <div class="acciones">
+                        <button class="abtn abtn-pwd" onclick="abrirCambiarPwd('${u.usuario}')">🔑 Contraseña</button>
+                        ${u.rol !== 'admin' ? `<button class="abtn abtn-del" onclick="eliminar('${u.usuario}')">🗑️</button>` : ''}
+                    </div>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function crearUsuario() {
+        const data = {
+            nombre: document.getElementById('f-nombre').value.trim(),
+            usuario: document.getElementById('f-usuario').value.trim(),
+            password: document.getElementById('f-password').value,
+            rol: document.getElementById('f-rol').value
+        };
+        if (!data.usuario || !data.password) { toast('Usuario y contraseña obligatorios', true); return; }
+        const res = await fetch('/api/usuarios', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+        const r = await res.json();
+        if (r.error) { toast(r.error, true); return; }
+        toast('✅ Usuario creado');
+        ['f-nombre','f-usuario','f-password'].forEach(id => document.getElementById(id).value = '');
+        cargar();
+    }
+
+    function abrirCambiarPwd(usuario) {
+        document.getElementById('pwd-usuario').value = usuario;
+        document.getElementById('pwd-nueva').value = '';
+        document.getElementById('modal-pwd').classList.add('activo');
+    }
+
+    async function guardarPassword() {
+        const usuario = document.getElementById('pwd-usuario').value;
+        const password = document.getElementById('pwd-nueva').value;
+        const res = await fetch(`/api/usuarios/${usuario}/password`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password}) });
+        const r = await res.json();
+        document.getElementById('modal-pwd').classList.remove('activo');
+        if (r.error) { toast(r.error, true); return; }
+        toast('✅ Contraseña actualizada');
+    }
+
+    async function eliminar(usuario) {
+        if (!confirm(`¿Eliminar usuario "${usuario}"?`)) return;
+        const res = await fetch(`/api/usuarios/${usuario}`, { method:'DELETE' });
+        const r = await res.json();
+        if (r.error) { toast(r.error, true); return; }
+        toast('🗑️ Usuario eliminado');
+        cargar();
+    }
+
+    function toast(msg, error = false) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show' + (error ? ' error' : '');
+        setTimeout(() => t.className = '', 3000);
+    }
+
+    cargar();
+</script>
+</body>
+</html>
