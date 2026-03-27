@@ -116,7 +116,14 @@ def crear_producto(data):
         sheet = get_sheet_productos()
         todos = sheet.get_all_records()
         nuevo_id = max([int(r.get('id', 0)) for r in todos], default=0) + 1
-        sheet.append_row([nuevo_id, data.get('nombre', ''), float(data.get('precio', 0)), int(data.get('stock', 0)), int(data.get('minimo', 5))])
+        # ✅ FIX: usar "or" para manejar None, "", 0 correctamente
+        sheet.append_row([
+            nuevo_id,
+            data.get('nombre') or '',
+            float(data.get('precio') or 0),
+            int(data.get('stock') or 0),
+            int(data.get('minimo') or 5)
+        ])
         cache_productos = []
         cache_tiempo = 0
         return {'ok': True, 'id': nuevo_id}
@@ -137,7 +144,14 @@ def actualizar_producto(id, data):
                 break
         if not fila_num:
             return {'error': 'Producto no encontrado'}
-        sheet.update(f'A{fila_num}:E{fila_num}', [[id, data.get('nombre', producto_actual.get('nombre', '')), float(data.get('precio', producto_actual.get('precio', 0))), int(data.get('stock', producto_actual.get('stock', 0))), int(data.get('minimo', producto_actual.get('minimo', 5)))]])
+        # ✅ FIX: usar "or" para manejar None, "", 0 correctamente
+        sheet.update(f'A{fila_num}:E{fila_num}', [[
+            id,
+            data.get('nombre') or producto_actual.get('nombre', ''),
+            float(data.get('precio') or producto_actual.get('precio', 0)),
+            int(data.get('stock') or producto_actual.get('stock', 0)),
+            int(data.get('minimo') or producto_actual.get('minimo', 5))
+        ]])
         cache_productos = []
         cache_tiempo = 0
         return {'ok': True}
@@ -448,7 +462,6 @@ def get_catalogo_truper():
         ws = get_sheet_truper()
         catalogo = ws.get_all_records()
         inventario = get_productos()
-        # Índice de inventario por clave truper y por nombre similar
         inv_por_clave = {str(p.get('clave_truper', '')).upper(): p for p in inventario if p.get('clave_truper')}
 
         for item in catalogo:
@@ -499,7 +512,6 @@ def sincronizar_inventario_desde_truper(productos):
         col_precio = headers.index('precio') + 1 if 'precio' in headers else 3
         col_clave_truper = headers.index('clave_truper') + 1 if 'clave_truper' in headers else len(headers)
 
-        # Índice de inventario por clave_truper → fila
         inv_por_clave = {}
         for i, r in enumerate(todos):
             ct = str(r.get('clave_truper', '')).upper().strip()
@@ -517,18 +529,15 @@ def sincronizar_inventario_desde_truper(productos):
                 continue
 
             if clave in inv_por_clave:
-                # Actualizar precio en inventario existente
                 fila = inv_por_clave[clave]['fila']
                 sheet.update_cell(fila, col_precio, precio)
                 actualizados += 1
             else:
-                # Producto nuevo → preparar para inserción masiva
                 max_id += 1
                 nombre = p.get('nombre', '') or clave
                 nuevos_rows.append([max_id, nombre, precio, 0, 5, p.get('clave', ''), ''])
-                inv_por_clave[clave] = {'fila': None, 'record': {}}  # evitar duplicados
+                inv_por_clave[clave] = {'fila': None, 'record': {}}
 
-        # Insertar todos los nuevos de una sola vez (más eficiente)
         if nuevos_rows:
             sheet.append_rows(nuevos_rows)
 
@@ -545,7 +554,6 @@ def agregar_desde_truper(data):
         sheet = get_sheet_productos()
         todos = sheet.get_all_records()
 
-        # Verificar si ya existe por clave_truper
         for r in todos:
             if str(r.get('clave_truper', '')).upper() == str(data.get('clave', '')).upper():
                 return {'error': 'Este producto Truper ya está en el inventario'}
@@ -553,9 +561,9 @@ def agregar_desde_truper(data):
         _asegurar_columnas_truper(sheet)
         nuevo_id = max([int(r.get('id', 0)) for r in todos], default=0) + 1
         nombre = data.get('nombre') or data.get('clave', '')
-        precio = float(data.get('precio', 0))
-        stock = int(data.get('stock', 0))
-        minimo = int(data.get('minimo', 5))
+        precio = float(data.get('precio') or 0)
+        stock = int(data.get('stock') or 0)
+        minimo = int(data.get('minimo') or 5)
         clave_truper = data.get('clave', '')
         imagen = data.get('imagen', '')
 
@@ -578,14 +586,12 @@ def actualizar_imagen_producto(id, imagen_url):
         all_values = sheet.get_all_values()
         headers = all_values[0] if all_values else []
 
-        # Obtener o crear columna imagen
         if 'imagen' not in headers:
             col_imagen = len(headers) + 1
             if 'clave_truper' not in headers:
                 sheet.update_cell(1, len(headers) + 1, 'clave_truper')
                 col_imagen = len(headers) + 2
             sheet.update_cell(1, col_imagen, 'imagen')
-            # Re-leer headers
             all_values = sheet.get_all_values()
             headers = all_values[0]
 
